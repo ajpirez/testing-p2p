@@ -24,5 +24,11 @@ export class OrdersController {
     if (!userId) throw new BadRequestException("Missing x-user-id header");
     return this.ordersService.release(id, userId);
   }
+
+  @Post(":id/lock-funds")
+  async lockFunds(@Param("id") id: string, @Headers("x-user-id") userId: string) {
+    if (!userId) throw new BadRequestException("Missing x-user-id header");
+    return this.ordersService.lockFunds(id, userId);
+  }
 }
 

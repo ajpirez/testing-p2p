@@ -32,6 +32,9 @@ importers:
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
+      ethers:
+        specifier: ^6.16.0
+        version: 6.16.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

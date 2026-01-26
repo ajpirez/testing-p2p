@@ -43,6 +43,8 @@ enum OrderStatus {
 model User {
   id        String   @id @default(uuid())
   email     String?  @unique
+  walletIndex Int?   @unique
+  walletAddress String? @unique
   createdAt DateTime @default(now())
 
   offers Offer[] @relation("UserOffers")
@@ -78,6 +80,9 @@ model Order {
   seller    User        @relation("SellerOrders", fields: [sellerId], references: [id])
   amount    Decimal     @db.Decimal(36, 18)
   status    OrderStatus @default(CREATED)
+  escrowOrderId String?
+  fundTxHash    String?
+  releaseTxHash String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 

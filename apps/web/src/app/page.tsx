@@ -4,12 +4,19 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CreateOfferInput, PaymentMethodType } from "@p2p/shared";
 
+type LocalUser = {
+  id: string;
+  email: string | null;
+  walletAddress?: string | null;
+};
+
 export default function Home() {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:4000";
-  const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
+  const [email, setEmail] = useState<string>("alice@example.com");
   const [offers, setOffers] = useState<any[]>([]);
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
-  const [takeAmount, setTakeAmount] = useState<string>("50");
+  const [takeAmount, setTakeAmount] = useState<string>("0.01");
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
   const [form, setForm] = useState<CreateOfferInput>({
@@ -17,8 +24,8 @@ export default function Home() {
     asset: "USDT",
     fiat: "EUR",
     price: 1.0,
-    minAmount: 10,
-    maxAmount: 200,
+    minAmount: 0.01,
+    maxAmount: 1,
     paymentMethods: ["BANK_TRANSFER"],
   });
 
@@ -28,19 +35,38 @@ export default function Home() {
   );
 
   useEffect(() => {
-    const stored = localStorage.getItem("p2p_user_id");
-    if (stored) setUserId(stored);
+    const storedUser = localStorage.getItem("p2p_user");
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser) as LocalUser;
+        if (parsed?.id) setUser(parsed);
+        if (parsed?.email) setEmail(parsed.email);
+      } catch {
+        // ignore
+      }
+    } else {
+      const storedId = localStorage.getItem("p2p_user_id");
+      if (storedId) setUser({ id: storedId, email: null });
+    }
   }, []);
 
-  async function devLogin() {
+  async function devLoginWithEmail() {
     const res = await fetch(`${apiBase}/auth/dev-login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ email }),
     });
+    if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     localStorage.setItem("p2p_user_id", data.user.id);
-    setUserId(data.user.id);
+    localStorage.setItem("p2p_user", JSON.stringify(data.user));
+    setUser(data.user);
+  }
+
+  function logout() {
+    localStorage.removeItem("p2p_user_id");
+    localStorage.removeItem("p2p_user");
+    setUser(null);
   }
 
   async function loadOffers() {
@@ -53,12 +79,12 @@ export default function Home() {
   }
 
   async function createOffer() {
-    if (!userId) throw new Error("No userId");
+    if (!user?.id) throw new Error("No user");
     const res = await fetch(`${apiBase}/offers`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-user-id": userId,
+        "x-user-id": user.id,
       },
       body: JSON.stringify(form),
     });
@@ -70,12 +96,12 @@ export default function Home() {
   }
 
   async function takeOffer() {
-    if (!userId) throw new Error("No userId");
+    if (!user?.id) throw new Error("No user");
     const res = await fetch(`${apiBase}/offers/take`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-user-id": userId,
+        "x-user-id": user.id,
       },
       body: JSON.stringify({
         offerId: selectedOfferId,
@@ -101,15 +127,33 @@ export default function Home() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
               <div className="font-medium text-zinc-700">User ID</div>
-              <div className="font-mono text-zinc-900">{userId ?? "(no login)"}</div>
+              <div className="font-mono text-zinc-900">{user?.id ?? "(no login)"}</div>
+              {user?.walletAddress ? (
+                <div className="mt-1 font-mono text-xs text-zinc-600">{user.walletAddress}</div>
+              ) : null}
             </div>
             <div className="flex gap-2">
-              <button
-                className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
-                onClick={devLogin}
-              >
-                Dev login
-              </button>
+              <div className="flex flex-1 gap-2">
+                <input
+                  className="w-full min-w-[220px] rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  placeholder="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <button
+                  className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
+                  onClick={() => devLoginWithEmail().catch((e) => alert(String(e)))}
+                >
+                  Login
+                </button>
+                <button
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:border-zinc-400"
+                  onClick={logout}
+                  disabled={!user}
+                >
+                  Logout
+                </button>
+              </div>
               <button
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:border-zinc-400"
                 onClick={loadOffers}
@@ -222,7 +266,7 @@ export default function Home() {
             <button
               className="mt-4 w-full rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
               onClick={() => createOffer().catch((e) => alert(String(e)))}
-              disabled={!userId}
+                disabled={!user?.id}
             >
               Create offer
             </button>
@@ -257,7 +301,7 @@ export default function Home() {
               <button
                 className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
                 onClick={() => takeOffer().catch((e) => alert(String(e)))}
-                disabled={!userId || !selectedOfferId}
+                disabled={!user?.id || !selectedOfferId}
               >
                 Take
               </button>

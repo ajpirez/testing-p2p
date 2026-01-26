@@ -17,12 +17,8 @@ export class OffersService {
   }
 
   async create(makerId: string, input: CreateOfferInput) {
-    // ensure user exists
-    await this.prisma.user.upsert({
-      where: { id: makerId },
-      update: {},
-      create: { id: makerId, email: null },
-    });
+    const maker = await this.prisma.user.findUnique({ where: { id: makerId } });
+    if (!maker) throw new BadRequestException("Unknown user. Use dev-login first.");
 
     if (input.minAmount > input.maxAmount) {
       throw new BadRequestException("minAmount cannot be greater than maxAmount");
@@ -43,12 +39,8 @@ export class OffersService {
   }
 
   async take(buyerId: string, input: TakeOfferInput) {
-    // ensure user exists
-    await this.prisma.user.upsert({
-      where: { id: buyerId },
-      update: {},
-      create: { id: buyerId, email: null },
-    });
+    const buyer = await this.prisma.user.findUnique({ where: { id: buyerId } });
+    if (!buyer) throw new BadRequestException("Unknown user. Use dev-login first.");
 
     const offer = await this.prisma.offer.findUnique({ where: { id: input.offerId } });
     if (!offer || !offer.isActive) throw new NotFoundException("Offer not found");
