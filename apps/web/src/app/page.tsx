@@ -236,7 +236,7 @@ export default function Home() {
               <label className="flex flex-col gap-1">
                 <span className="text-zinc-600">Amount</span>
                 <input
-                  className="rounded-lg border p-2"
+                  className="rounded-lg border p-2 text-zinc-600"
                   value={takeAmount}
                   onChange={(e) => setTakeAmount(e.target.value)}
                 />

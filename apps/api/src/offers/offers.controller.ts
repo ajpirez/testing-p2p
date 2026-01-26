@@ -1,11 +1,14 @@
-import { BadRequestException, Body, Controller, Get, Headers, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Headers, Inject, Post } from "@nestjs/common";
 import { CreateOfferSchema, TakeOfferSchema } from "@p2p/shared";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import { OffersService } from "./offers.service";
 
 @Controller("offers")
 export class OffersController {
-  constructor(private readonly offersService: OffersService) {}
+  constructor(
+    @Inject(OffersService)
+    private readonly offersService: OffersService,
+  ) {}
 
   @Get()
   async list() {

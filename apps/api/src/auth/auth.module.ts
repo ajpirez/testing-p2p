@@ -5,6 +5,7 @@ import { DevAuthService } from "./dev-auth.service";
 @Module({
   controllers: [DevAuthController],
   providers: [DevAuthService],
+  exports: [DevAuthService],
 })
 export class AuthModule {}
 

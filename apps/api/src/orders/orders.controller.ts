@@ -1,9 +1,12 @@
-import { BadRequestException, Controller, Get, Headers, Param, Post } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Headers, Inject, Param, Post } from "@nestjs/common";
 import { OrdersService } from "./orders.service";
 
 @Controller("orders")
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    @Inject(OrdersService)
+    private readonly ordersService: OrdersService,
+  ) {}
 
   @Get(":id")
   async get(@Param("id") id: string) {
