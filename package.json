@@ -1,0 +1,20 @@
+{
+  "name": "p2p-exchange-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "scripts": {
+    "dev": "turbo dev --filter=web --filter=api",
+    "dev:web": "pnpm -C apps/web dev",
+    "dev:api": "pnpm -C apps/api dev",
+    "contracts:test": "pnpm -C packages/contracts test",
+    "contracts:deploy:ganache": "pnpm -C packages/contracts deploy:ganache",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.6"
+  }
+}
+

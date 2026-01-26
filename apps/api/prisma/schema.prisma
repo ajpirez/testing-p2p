@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OfferSide {
+  BUY
+  SELL
+}
+
+enum AssetCode {
+  USDT
+  USDC
+}
+
+enum FiatCode {
+  EUR
+  USD
+}
+
+enum PaymentMethodType {
+  BANK_TRANSFER
+  BIZUM
+  PAYPAL
+  CASH
+}
+
+enum OrderStatus {
+  CREATED
+  FUNDS_LOCKED
+  PAYMENT_MARKED
+  RELEASED
+  CANCELLED
+  EXPIRED
+  DISPUTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String?  @unique
+  createdAt DateTime @default(now())
+
+  offers Offer[] @relation("UserOffers")
+  buys  Order[] @relation("BuyerOrders")
+  sells Order[] @relation("SellerOrders")
+  messages Message[]
+}
+
+model Offer {
+  id             String              @id @default(uuid())
+  makerId        String
+  maker          User                @relation("UserOffers", fields: [makerId], references: [id])
+  side           OfferSide
+  asset          AssetCode
+  fiat           FiatCode
+  price          Decimal             @db.Decimal(36, 18)
+  minAmount      Decimal             @db.Decimal(36, 18)
+  maxAmount      Decimal             @db.Decimal(36, 18)
+  paymentMethods PaymentMethodType[]
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+
+  orders Order[]
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  offerId   String
+  offer     Offer       @relation(fields: [offerId], references: [id])
+  buyerId   String
+  buyer     User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User        @relation("SellerOrders", fields: [sellerId], references: [id])
+  amount    Decimal     @db.Decimal(36, 18)
+  status    OrderStatus @default(CREATED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  messages Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+}
+

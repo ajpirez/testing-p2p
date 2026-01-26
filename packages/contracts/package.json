@@ -1,0 +1,24 @@
+{
+  "name": "@p2p/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "hardhat compile",
+    "lint": "echo \"(contracts) no lint configured\"",
+    "test": "hardhat test",
+    "deploy:ganache": "hardhat run scripts/deploy.ts --network ganache",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@types/node": "^22.10.7",
+    "hardhat": "^2.28.3",
+    "typescript": "^5.7.3"
+  }
+}
+
