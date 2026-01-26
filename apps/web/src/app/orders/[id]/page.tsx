@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 type LocalUser = {
   id: string;
@@ -8,7 +8,8 @@ type LocalUser = {
   walletAddress?: string | null;
 };
 
-export default function OrderPage({ params }: { params: { id: string } }) {
+export default function OrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:4000";
   const [user, setUser] = useState<LocalUser | null>(null);
   const [order, setOrder] = useState<any>(null);
@@ -31,7 +32,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
 
   async function load() {
     setError(null);
-    const res = await fetch(`${apiBase}/orders/${params.id}`);
+    const res = await fetch(`${apiBase}/orders/${id}`);
     if (!res.ok) throw new Error(await res.text());
     setOrder(await res.json());
   }
@@ -39,14 +40,14 @@ export default function OrderPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     load().catch((e) => setError(String(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [id]);
 
   const isBuyer = Boolean(user?.id && order?.buyerId === user.id);
   const isSeller = Boolean(user?.id && order?.sellerId === user.id);
 
   async function lockFunds() {
     if (!user?.id) throw new Error("No userId");
-    const res = await fetch(`${apiBase}/orders/${params.id}/lock-funds`, {
+    const res = await fetch(`${apiBase}/orders/${id}/lock-funds`, {
       method: "POST",
       headers: { "x-user-id": user.id },
     });
@@ -56,7 +57,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
 
   async function markPaid() {
     if (!user?.id) throw new Error("No userId");
-    const res = await fetch(`${apiBase}/orders/${params.id}/mark-paid`, {
+    const res = await fetch(`${apiBase}/orders/${id}/mark-paid`, {
       method: "POST",
       headers: { "x-user-id": user.id },
     });
@@ -66,7 +67,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
 
   async function release() {
     if (!user?.id) throw new Error("No userId");
-    const res = await fetch(`${apiBase}/orders/${params.id}/release`, {
+    const res = await fetch(`${apiBase}/orders/${id}/release`, {
       method: "POST",
       headers: { "x-user-id": user.id },
     });
@@ -83,7 +84,7 @@ export default function OrderPage({ params }: { params: { id: string } }) {
         <h1 className="text-3xl font-bold text-zinc-900">Order</h1>
         <div className="rounded-xl border bg-white p-4 text-sm">
           <div className="text-xs font-medium text-zinc-600">Order ID</div>
-          <div className="font-mono text-zinc-900">{params.id}</div>
+          <div className="font-mono text-zinc-900">{id}</div>
           <div className="mt-3 text-xs font-medium text-zinc-600">User</div>
           <div className="font-mono text-zinc-900">{user?.id ?? "(no login)"}</div>
           {user?.walletAddress ? (
