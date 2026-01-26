@@ -91,17 +91,17 @@ export default function Home() {
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">P2P Exchange (local)</h1>
+          <h1 className="text-3xl font-bold text-zinc-900">P2P Exchange (local)</h1>
           <p className="text-sm text-zinc-600">
-            API: <span className="font-mono">{apiBase}</span>
+            API: <span className="font-mono text-zinc-800">{apiBase}</span>
           </p>
         </header>
 
         <section className="rounded-xl border bg-white p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
-              <div className="text-zinc-600">User ID</div>
-              <div className="font-mono">{userId ?? "(no login)"}</div>
+              <div className="font-medium text-zinc-700">User ID</div>
+              <div className="font-mono text-zinc-900">{userId ?? "(no login)"}</div>
             </div>
             <div className="flex gap-2">
               <button
@@ -111,7 +111,7 @@ export default function Home() {
                 Dev login
               </button>
               <button
-                className="rounded-lg border px-3 py-2 text-sm font-medium"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:border-zinc-400"
                 onClick={loadOffers}
               >
                 Refresh offers
@@ -122,12 +122,12 @@ export default function Home() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-xl border bg-white p-4">
-            <h2 className="text-lg font-semibold">Create offer</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">Create offer</h2>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Side</span>
+                <span className="text-sm font-medium text-zinc-700">Side</span>
                 <select
-                  className="rounded-lg border p-2"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={form.side}
                   onChange={(e) => setForm((f) => ({ ...f, side: e.target.value as any }))}
                 >
@@ -136,9 +136,9 @@ export default function Home() {
                 </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Asset</span>
+                <span className="text-sm font-medium text-zinc-700">Asset</span>
                 <select
-                  className="rounded-lg border p-2"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={form.asset}
                   onChange={(e) => setForm((f) => ({ ...f, asset: e.target.value as any }))}
                 >
@@ -147,9 +147,9 @@ export default function Home() {
                 </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Fiat</span>
+                <span className="text-sm font-medium text-zinc-700">Fiat</span>
                 <select
-                  className="rounded-lg border p-2"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={form.fiat}
                   onChange={(e) => setForm((f) => ({ ...f, fiat: e.target.value as any }))}
                 >
@@ -158,39 +158,51 @@ export default function Home() {
                 </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Price</span>
+                <span className="text-sm font-medium text-zinc-700">Price</span>
                 <input
-                  className="rounded-lg border p-2"
+                  type="number"
+                  step="0.01"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={String(form.price)}
                   onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))}
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Min</span>
+                <span className="text-sm font-medium text-zinc-700">Min</span>
                 <input
-                  className="rounded-lg border p-2"
+                  type="number"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={String(form.minAmount)}
                   onChange={(e) => setForm((f) => ({ ...f, minAmount: Number(e.target.value) }))}
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Max</span>
+                <span className="text-sm font-medium text-zinc-700">Max</span>
                 <input
-                  className="rounded-lg border p-2"
+                  type="number"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={String(form.maxAmount)}
                   onChange={(e) => setForm((f) => ({ ...f, maxAmount: Number(e.target.value) }))}
                 />
               </label>
               <div className="col-span-2">
-                <div className="text-zinc-600">Payment methods</div>
+                <div className="text-sm font-medium text-zinc-700">Payment methods</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {paymentOptions.map((pm) => {
                     const checked = form.paymentMethods.includes(pm);
                     return (
-                      <label key={pm} className="flex items-center gap-2 rounded-full border px-3 py-1">
+                      <label
+                        key={pm}
+                        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          checked
+                            ? "border-zinc-900 bg-zinc-900 text-white"
+                            : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400"
+                        }`}
+                      >
                         <input
                           type="checkbox"
                           checked={checked}
+                          className="h-3.5 w-3.5"
                           onChange={(e) => {
                             setForm((f) => ({
                               ...f,
@@ -200,7 +212,7 @@ export default function Home() {
                             }));
                           }}
                         />
-                        <span className="font-mono text-xs">{pm}</span>
+                        <span className="font-mono">{pm}</span>
                       </label>
                     );
                   })}
@@ -217,12 +229,12 @@ export default function Home() {
           </section>
 
           <section className="rounded-xl border bg-white p-4">
-            <h2 className="text-lg font-semibold">Take offer</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">Take offer</h2>
             <div className="mt-4 flex flex-col gap-3 text-sm">
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Offer</span>
+                <span className="text-sm font-medium text-zinc-700">Offer</span>
                 <select
-                  className="rounded-lg border p-2 font-mono text-xs"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 font-mono text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={selectedOfferId}
                   onChange={(e) => setSelectedOfferId(e.target.value)}
                 >
@@ -234,9 +246,10 @@ export default function Home() {
                 </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-zinc-600">Amount</span>
+                <span className="text-sm font-medium text-zinc-700">Amount</span>
                 <input
-                  className="rounded-lg border p-2 text-zinc-600"
+                  type="number"
+                  className="rounded-lg border border-zinc-300 bg-white p-2 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   value={takeAmount}
                   onChange={(e) => setTakeAmount(e.target.value)}
                 />
@@ -263,30 +276,30 @@ export default function Home() {
         </div>
 
         <section className="rounded-xl border bg-white p-4">
-          <h2 className="text-lg font-semibold">Offers (active)</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">Offers (active)</h2>
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-zinc-500">
+            <table className="w-full text-left">
+              <thead className="bg-zinc-50">
                 <tr>
-                  <th className="py-2">id</th>
-                  <th>side</th>
-                  <th>asset</th>
-                  <th>fiat</th>
-                  <th>price</th>
-                  <th>min</th>
-                  <th>max</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">id</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">side</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">asset</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">fiat</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">price</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">min</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wide text-zinc-700">max</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-zinc-200">
                 {offers.map((o) => (
-                  <tr key={o.id} className="border-t">
-                    <td className="py-2 font-mono text-xs">{o.id}</td>
-                    <td>{o.side}</td>
-                    <td>{o.asset}</td>
-                    <td>{o.fiat}</td>
-                    <td>{String(o.price)}</td>
-                    <td>{String(o.minAmount)}</td>
-                    <td>{String(o.maxAmount)}</td>
+                  <tr key={o.id} className="hover:bg-zinc-50">
+                    <td className="py-3 px-4 font-mono text-sm text-zinc-900">{o.id}</td>
+                    <td className="py-3 px-4 text-sm font-medium text-zinc-900">{o.side}</td>
+                    <td className="py-3 px-4 text-sm text-zinc-900">{o.asset}</td>
+                    <td className="py-3 px-4 text-sm text-zinc-900">{o.fiat}</td>
+                    <td className="py-3 px-4 text-sm text-zinc-900">{String(o.price)}</td>
+                    <td className="py-3 px-4 text-sm text-zinc-900">{String(o.minAmount)}</td>
+                    <td className="py-3 px-4 text-sm text-zinc-900">{String(o.maxAmount)}</td>
                   </tr>
                 ))}
               </tbody>
