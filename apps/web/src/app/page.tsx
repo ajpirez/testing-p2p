@@ -117,9 +117,9 @@ export default function Home() {
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-zinc-900">P2P Exchange (local)</h1>
-          <p className="text-sm text-zinc-600">
-            API: <span className="font-mono text-zinc-800">{apiBase}</span>
+          <h1 className="text-3xl font-bold text-white">P2P Exchange (local)</h1>
+          <p className="text-sm text-white">
+            API: <span className="font-mono text-white">{apiBase}</span>
           </p>
         </header>
 
