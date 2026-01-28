@@ -7,7 +7,7 @@ export class OffersService {
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async listActive() {
     return this.prisma.offer.findMany({
@@ -44,6 +44,10 @@ export class OffersService {
 
     const offer = await this.prisma.offer.findUnique({ where: { id: input.offerId } });
     if (!offer || !offer.isActive) throw new NotFoundException("Offer not found");
+
+    if (offer.makerId === buyerId) {
+      throw new BadRequestException("You cannot take your own offer");
+    }
 
     const amount = input.amount;
     if (amount < Number(offer.minAmount) || amount > Number(offer.maxAmount)) {

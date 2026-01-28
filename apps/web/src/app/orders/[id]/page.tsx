@@ -1,6 +1,15 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
+import {
+  OrderTimeline,
+  OrderStatusBadge,
+  RoleIndicator,
+  OrderStatusMessage,
+  OrderActions,
+  OrderDetailsCard,
+} from "@/components/order";
+import { type Order, type OrderStatus, getUserRole } from "@/types/order";
 
 type LocalUser = {
   id: string;
@@ -8,13 +17,26 @@ type LocalUser = {
   walletAddress?: string | null;
 };
 
-export default function OrderPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:4000";
-  const [user, setUser] = useState<LocalUser | null>(null);
-  const [order, setOrder] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+const POLL_INTERVAL = 5000; // 5 segundos
 
+export default function OrderPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:4000";
+
+  const [user, setUser] = useState<LocalUser | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cargar usuario del localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("p2p_user");
     if (storedUser) {
@@ -30,21 +52,54 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
     }
   }, []);
 
-  async function load() {
-    setError(null);
-    const res = await fetch(`${apiBase}/orders/${id}`);
-    if (!res.ok) throw new Error(await res.text());
-    setOrder(await res.json());
-  }
+  // Función para cargar la orden
+  const loadOrder = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await fetch(`${apiBase}/orders/${id}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setOrder(data);
+      setLastUpdate(new Date());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [apiBase, id]);
 
+  // Polling automático
   useEffect(() => {
-    load().catch((e) => setError(String(e)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    loadOrder();
 
-  const isBuyer = Boolean(user?.id && order?.buyerId === user.id);
-  const isSeller = Boolean(user?.id && order?.sellerId === user.id);
+    const poll = () => {
+      const terminalStatuses: OrderStatus[] = [
+        "RELEASED",
+        "COMPLETED",
+        "CANCELLED",
+        "REFUNDED",
+      ];
+      if (
+        isPolling &&
+        !terminalStatuses.includes((order?.status as OrderStatus) ?? "CREATED")
+      ) {
+        pollTimeoutRef.current = setTimeout(() => {
+          loadOrder().finally(poll);
+        }, POLL_INTERVAL);
+      }
+    };
 
+    poll();
+
+    return () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+    };
+  }, [loadOrder, isPolling, order?.status]);
+
+  // Determinar rol del usuario
+  const role = order ? getUserRole(user?.id, order) : "spectator";
+
+  // Handlers para acciones
   async function lockFunds() {
     if (!user?.id) throw new Error("No userId");
     const res = await fetch(`${apiBase}/orders/${id}/lock-funds`, {
@@ -52,7 +107,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       headers: { "x-user-id": user.id },
     });
     if (!res.ok) throw new Error(await res.text());
-    await load();
+    await loadOrder();
   }
 
   async function markPaid() {
@@ -62,7 +117,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       headers: { "x-user-id": user.id },
     });
     if (!res.ok) throw new Error(await res.text());
-    await load();
+    await loadOrder();
   }
 
   async function release() {
@@ -72,127 +127,168 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       headers: { "x-user-id": user.id },
     });
     if (!res.ok) throw new Error(await res.text());
-    await load();
+    await loadOrder();
   }
 
   return (
-    <div className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <a className="text-sm underline" href="/">
-          ← Back
-        </a>
-        <h1 className="text-3xl font-bold text-zinc-900">Order</h1>
-        <div className="rounded-xl border bg-white p-4 text-sm">
-          <div className="text-xs font-medium text-zinc-600">Order ID</div>
-          <div className="font-mono text-zinc-900">{id}</div>
-          <div className="mt-3 text-xs font-medium text-zinc-600">User</div>
-          <div className="font-mono text-zinc-900">{user?.id ?? "(no login)"}</div>
-          {user?.walletAddress ? (
-            <div className="mt-1 font-mono text-xs text-zinc-600">{user.walletAddress}</div>
-          ) : null}
-        </div>
-
-        {error ? <div className="rounded-xl border bg-white p-4 text-sm text-red-600">{error}</div> : null}
-
-        {order ? (
-          <div className="rounded-xl border bg-white p-4 text-sm">
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700">
-                status: <span className="font-mono text-zinc-900">{order.status}</span>
-              </span>
-              {isBuyer ? (
-                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
-                  you are buyer
-                </span>
-              ) : null}
-              {isSeller ? (
-                <span className="rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800">
-                  you are seller
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-zinc-600">Amount (ETH)</div>
-                <div className="font-mono text-zinc-900">{String(order.amount)}</div>
-              </div>
-              <div>
-                <div className="text-zinc-600">Escrow key</div>
-                <div className="font-mono text-xs text-zinc-900">{order.escrowOrderId ?? "(not set yet)"}</div>
-              </div>
-              <div>
-                <div className="text-zinc-600">Buyer</div>
-                <div className="font-mono text-xs text-zinc-900">{order.buyerId}</div>
-                {order.buyer?.walletAddress ? (
-                  <div className="font-mono text-xs text-zinc-600">{order.buyer.walletAddress}</div>
-                ) : null}
-              </div>
-              <div>
-                <div className="text-zinc-600">Seller</div>
-                <div className="font-mono text-xs text-zinc-900">{order.sellerId}</div>
-                {order.seller?.walletAddress ? (
-                  <div className="font-mono text-xs text-zinc-600">{order.seller.walletAddress}</div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              {order.fundTxHash ? (
-                <div className="rounded-lg border bg-zinc-50 p-3">
-                  <div className="text-xs text-zinc-600">Fund tx</div>
-                  <div className="font-mono text-xs text-zinc-900">{order.fundTxHash}</div>
-                </div>
-              ) : null}
-              {order.releaseTxHash ? (
-                <div className="rounded-lg border bg-zinc-50 p-3">
-                  <div className="text-xs text-zinc-600">Release tx</div>
-                  <div className="font-mono text-xs text-zinc-900">{order.releaseTxHash}</div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <button
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:border-zinc-400"
-                onClick={() => load().catch((e) => alert(String(e)))}
+    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 px-4 py-8 sm:px-6">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        {/* Header */}
+        <header className="flex items-center justify-between">
+          <div>
+            <a
+              href="/"
+              className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700 transition-colors"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                Refresh
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Volver al inicio
+            </a>
+            <h1 className="mt-1 text-2xl font-bold text-zinc-900">Orden P2P</h1>
+          </div>
+          {order && (
+            <OrderStatusBadge status={order.status as OrderStatus} size="lg" />
+          )}
+        </header>
 
-              {isSeller && order.status === "CREATED" ? (
-                <button
-                  className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
-                  onClick={() => lockFunds().catch((e) => alert(String(e)))}
+        {/* User Info Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-zinc-100 flex items-center justify-center text-xl">
+              {role === "seller" ? "💰" : role === "buyer" ? "🛒" : "👤"}
+            </div>
+            <div>
+              <div className="text-sm font-medium text-zinc-900">
+                {user?.email || user?.id?.slice(0, 8) || "No logueado"}
+              </div>
+              {user?.walletAddress && (
+                <div
+                  className="font-mono text-xs text-zinc-500 truncate max-w-[200px]"
+                  title={user.walletAddress}
                 >
-                  Lock funds (on-chain)
-                </button>
-              ) : null}
-
-              {isBuyer && (order.status === "CREATED" || order.status === "FUNDS_LOCKED") ? (
-                <button
-                  className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
-                  onClick={() => markPaid().catch((e) => alert(String(e)))}
-                >
-                  Mark paid (buyer)
-                </button>
-              ) : null}
-
-              {isSeller && order.status === "PAYMENT_MARKED" ? (
-                <button
-                  className="rounded-lg bg-black px-3 py-2 text-sm font-medium text-white"
-                  onClick={() => release().catch((e) => alert(String(e)))}
-                >
-                  Release (on-chain)
-                </button>
-              ) : null}
+                  {user.walletAddress}
+                </div>
+              )}
             </div>
           </div>
+          {order && <RoleIndicator role={role} />}
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">❌</span>
+              <div>
+                <div className="font-medium text-red-800">Error</div>
+                <div className="text-sm text-red-600">{error}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order Content */}
+        {order ? (
+          <>
+            {/* Timeline */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <OrderTimeline status={order.status as OrderStatus} />
+            </div>
+
+            {/* Status Message */}
+            <OrderStatusMessage order={order} role={role} />
+
+            {/* Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white p-4">
+              <OrderActions
+                order={order}
+                role={role}
+                onLockFunds={lockFunds}
+                onMarkPaid={markPaid}
+                onRelease={release}
+                onRefresh={loadOrder}
+              />
+
+              <div className="flex items-center gap-3 text-xs text-zinc-400">
+                {lastUpdate && (
+                  <span>Actualizado: {lastUpdate.toLocaleTimeString()}</span>
+                )}
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPolling}
+                    onChange={(e) => setIsPolling(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-zinc-300"
+                  />
+                  <span>Auto-refresh</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Order Details */}
+            <OrderDetailsCard order={order} role={role} />
+
+            {/* Order ID (collapsible) */}
+            <details className="rounded-xl border border-zinc-200 bg-white">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+                Información Técnica
+              </summary>
+              <div className="border-t border-zinc-100 px-4 py-3 space-y-2">
+                <div>
+                  <div className="text-xs font-medium text-zinc-500">
+                    Order ID
+                  </div>
+                  <div className="font-mono text-xs text-zinc-700 break-all">
+                    {order.id}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-500">
+                    Seller ID
+                  </div>
+                  <div className="font-mono text-xs text-zinc-700 break-all">
+                    {order.sellerId}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-500">
+                    Buyer ID
+                  </div>
+                  <div className="font-mono text-xs text-zinc-700 break-all">
+                    {order.buyerId}
+                  </div>
+                </div>
+                {order.createdAt && (
+                  <div>
+                    <div className="text-xs font-medium text-zinc-500">
+                      Creado
+                    </div>
+                    <div className="text-xs text-zinc-700">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
+          </>
         ) : (
-          <div className="rounded-xl border bg-white p-4 text-sm">Loading…</div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center">
+            <div className="animate-spin h-8 w-8 mx-auto mb-3 border-2 border-zinc-300 border-t-zinc-600 rounded-full" />
+            <div className="text-sm text-zinc-500">Cargando orden...</div>
+          </div>
         )}
       </div>
     </div>
   );
 }
-
