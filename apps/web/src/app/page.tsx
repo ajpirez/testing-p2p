@@ -18,9 +18,12 @@ type Order = {
   sellerId: string;
 };
 
+type Chain = { chainId: number; name: string };
+
 type Offer = {
   id: string;
   makerId: string;
+  chainId?: number;
   side: "SELL" | "BUY";
   asset: string;
   fiat: string;
@@ -42,7 +45,9 @@ export default function Home() {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
 
+  const [chains, setChains] = useState<Chain[]>([]);
   const [form, setForm] = useState<CreateOfferInput>({
+    chainId: 5777,
     side: "SELL",
     asset: "USDT",
     fiat: "EUR",
@@ -72,6 +77,13 @@ export default function Home() {
       if (storedId) setUser({ id: storedId, email: null });
     }
   }, []);
+
+  useEffect(() => {
+    fetch(`${apiBase}/chains`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: Chain[]) => setChains(Array.isArray(list) ? list : []))
+      .catch(() => setChains([]));
+  }, [apiBase]);
 
   // Cargar ofertas y órdenes al tener usuario
   useEffect(() => {
@@ -192,6 +204,20 @@ export default function Home() {
       setLoading(null);
     }
   }
+
+  const chainName = (chainId: number | undefined) => {
+    if (chainId == null) return "—";
+    const c = chains.find((x) => x.chainId === chainId);
+    if (c) return c.name;
+    const names: Record<number, string> = {
+      5777: "Ganache",
+      97: "BSC Testnet",
+      56: "BNB",
+      80002: "Polygon Amoy",
+      137: "Polygon",
+    };
+    return names[chainId] ?? `Chain ${chainId}`;
+  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -342,6 +368,37 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5 col-span-2">
+                <span className="text-xs font-medium text-zinc-600">
+                  Red (Chain)
+                </span>
+                <select
+                  className="rounded-lg border border-zinc-300 bg-white p-2.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  value={String(form.chainId)}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      chainId: parseInt(e.target.value, 10),
+                    }))
+                  }
+                >
+                  {chains.length > 0 ? (
+                    chains.map((c) => (
+                      <option key={c.chainId} value={c.chainId}>
+                        {c.name}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="5777">Ganache (local)</option>
+                      <option value="97">BSC Testnet</option>
+                      <option value="56">BNB Chain</option>
+                      <option value="80002">Polygon Amoy</option>
+                      <option value="137">Polygon</option>
+                    </>
+                  )}
+                </select>
+              </label>
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-zinc-600">Tipo</span>
                 <select
@@ -532,8 +589,8 @@ export default function Home() {
                   <option value="">-- Selecciona una oferta --</option>
                   {offers.map((o) => (
                     <option key={o.id} value={o.id}>
-                      {o.side} {o.asset}/{o.fiat} @ {String(o.price)} •{" "}
-                      {o.id.slice(0, 8)}…{" "}
+                      [{chainName(o.chainId)}] {o.side} {o.asset}/{o.fiat} @{" "}
+                      {String(o.price)} • {o.id.slice(0, 8)}…{" "}
                       {user?.id === o.makerId ? "(tu oferta)" : ""}
                     </option>
                   ))}
@@ -688,7 +745,7 @@ export default function Home() {
                 {offers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="py-8 text-center text-sm text-zinc-400"
                     >
                       No hay ofertas disponibles
@@ -700,6 +757,9 @@ export default function Home() {
                       key={o.id}
                       className="hover:bg-zinc-50 transition-colors"
                     >
+                      <td className="py-3 px-5 text-xs text-zinc-600">
+                        {chainName(o.chainId)}
+                      </td>
                       <td className="py-3 px-5 font-mono text-sm text-zinc-700">
                         {o.id.slice(0, 8)}…
                       </td>

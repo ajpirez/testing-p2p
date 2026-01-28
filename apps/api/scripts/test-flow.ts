@@ -13,6 +13,8 @@
 
 // @ts-check
 const API_BASE = process.env.API_BASE_URL ?? "http://127.0.0.1:4000";
+/** Ganache GUI suele usar 5777; Ganache CLI 1337. Debe coincidir con DEFAULT_CHAIN_ID del API. */
+const CHAIN_ID = parseInt(process.env.P2P_CHAIN_ID ?? "5777", 10);
 
 interface User {
   id: string;
@@ -76,6 +78,7 @@ async function main() {
     const offer = await apiCall("POST", "/offers", {
       userId: alice.id,
       body: {
+        chainId: CHAIN_ID,
         side: "SELL",
         asset: "USDT",
         fiat: "EUR",

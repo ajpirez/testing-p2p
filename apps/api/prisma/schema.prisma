@@ -57,6 +57,7 @@ model Offer {
   id             String              @id @default(uuid())
   makerId        String
   maker          User                @relation("UserOffers", fields: [makerId], references: [id])
+  chainId        Int                 @default(5777)
   side           OfferSide
   asset          AssetCode
   fiat           FiatCode
@@ -70,10 +71,12 @@ model Offer {
   orders Order[]
 }
 
+
 model Order {
   id        String      @id @default(uuid())
   offerId   String
   offer     Offer       @relation(fields: [offerId], references: [id])
+  chainId   Int         @default(5777)
   buyerId   String
   buyer     User        @relation("BuyerOrders", fields: [buyerId], references: [id])
   sellerId  String

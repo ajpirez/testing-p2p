@@ -27,6 +27,7 @@ export class OffersService {
     return this.prisma.offer.create({
       data: {
         makerId,
+        chainId: input.chainId,
         side: input.side,
         asset: input.asset,
         fiat: input.fiat,
@@ -66,6 +67,7 @@ export class OffersService {
     return this.prisma.order.create({
       data: {
         offerId: offer.id,
+        chainId: offer.chainId,
         buyerId,
         sellerId,
         amount: amount,

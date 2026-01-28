@@ -10,7 +10,9 @@ export const PaymentMethodTypeSchema = z.enum([
   "CASH",
 ]);
 
+/** chainId: 5777=Ganache, 97=BSC Testnet, 56=BSC, 80002=Polygon Amoy, 137=Polygon */
 export const CreateOfferSchema = z.object({
+  chainId: z.number().int().positive(),
   side: OfferSideSchema,
   asset: CurrencyCodeSchema,
   fiat: FiatCodeSchema,

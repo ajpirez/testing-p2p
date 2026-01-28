@@ -5,14 +5,8 @@ import { ChainService } from "../chain/chain.service";
 import * as fs from "fs";
 import * as path from "path";
 
-/**
- * Carga el ABI completo desde el JSON generado por Hardhat
- * Este JSON se genera automáticamente cuando compilas el contrato con `hardhat compile`
- * Ruta: packages/contracts/artifacts/contracts/P2PEscrow.sol/P2PEscrow.json
- */
 function loadABIFromArtifact(): any[] {
   try {
-    // Ruta relativa desde apps/api/src/escrow/ a packages/contracts/artifacts/
     const artifactPath = path.join(
       __dirname,
       "../../../../packages/contracts/artifacts/contracts/P2PEscrow.sol/P2PEscrow.json",
@@ -30,7 +24,6 @@ function loadABIFromArtifact(): any[] {
 
 @Injectable()
 export class EscrowService {
-  private readonly contractAddress: string;
   private readonly abi: any[];
   private readonly logger = new Logger(EscrowService.name);
 
@@ -40,73 +33,57 @@ export class EscrowService {
     @Inject(ChainService)
     private readonly chain: ChainService,
   ) {
-    this.contractAddress = this.config.get<string>("P2P_ESCROW_CONTRACT_ADDRESS") ?? "";
-    // Cargar ABI completo desde el artifact (incluye funciones Y eventos)
     this.abi = loadABIFromArtifact();
-    this.logger.log(`✅ ABI cargado desde artifact (${this.abi.length} items, incluye eventos)`);
+    this.logger.log(`✅ ABI cargado desde artifact (${this.abi.length} items)`);
   }
 
-  orderIdToEscrowKey(orderId: string) {
-    // Stable bytes32 derived from order UUID string
+  orderIdToEscrowKey(orderId: string): string {
     return ethers.id(orderId);
   }
 
-  /**
-   * Crea una instancia del contrato con un signer (para escribir/transacciones)
-   * 
-   * ¿Cómo funciona la llamada a funciones del contrato?
-   * 1. ethers.Contract necesita: dirección del contrato, ABI, y un signer/provider
-   * 2. El ABI le dice a ethers qué funciones existen y cómo llamarlas
-   * 3. El signer es quien firma la transacción (necesario para funciones que modifican estado)
-   * 4. Cuando llamas contract.fund(...), ethers:
-   *    - Codifica los parámetros según el ABI
-   *    - Crea una transacción firmada por el signer
-   *    - La envía a la blockchain (Ganache en local)
-   *    - Espera la confirmación
-   */
-  private getContractWithSignerIndex(index: number) {
-    if (!this.contractAddress) {
-      throw new BadRequestException("Missing P2P_ESCROW_CONTRACT_ADDRESS in .env");
+  private async getContractWithSigner(chainId: number, signerIndex: number): Promise<ethers.Contract> {
+    const address = this.chain.getEscrowAddress(chainId);
+    if (!address) {
+      throw new BadRequestException(`Escrow not configured for chain ${chainId}. Set P2P_ESCROW_CONTRACT_ADDRESS or P2P_CHAINS.`);
     }
-    return this.chain.getSignerByIndex(index).then((signer) => {
-      return new ethers.Contract(this.contractAddress, this.abi, signer);
-    });
+    const signer = await this.chain.getSignerByIndex(chainId, signerIndex);
+    return new ethers.Contract(address, this.abi, signer);
   }
 
-  /**
-   * Obtiene una instancia del contrato sin signer (solo lectura, para escuchar eventos)
-   */
-  getContractReadOnly(): ethers.Contract {
-    if (!this.contractAddress) {
-      throw new BadRequestException("Missing P2P_ESCROW_CONTRACT_ADDRESS in .env");
+  getContractReadOnly(chainId: number): ethers.Contract {
+    const address = this.chain.getEscrowAddress(chainId);
+    if (!address) {
+      throw new BadRequestException(`Escrow not configured for chain ${chainId}.`);
     }
-    const provider = this.chain.getProvider();
-    return new ethers.Contract(this.contractAddress, this.abi, provider);
+    const provider = this.chain.getProvider(chainId);
+    return new ethers.Contract(address, this.abi, provider);
   }
 
-  async fund(params: { signerIndex: number; escrowKey: string; buyerAddress: string; amountEth: string }) {
-    const contract = await this.getContractWithSignerIndex(params.signerIndex);
-
-    // MVP: we treat `amount` as native ETH amount (18 decimals)
+  async fund(params: {
+    chainId: number;
+    signerIndex: number;
+    escrowKey: string;
+    buyerAddress: string;
+    amountEth: string;
+  }) {
+    const contract = await this.getContractWithSigner(params.chainId, params.signerIndex);
     const value = ethers.parseEther(params.amountEth);
     const tx = await contract.fund(params.escrowKey, params.buyerAddress, { value });
     const receipt = await tx.wait(1);
-
     return { txHash: tx.hash as string, blockNumber: receipt?.blockNumber ?? null };
   }
 
-  async release(params: { signerIndex: number; escrowKey: string }) {
-    const contract = await this.getContractWithSignerIndex(params.signerIndex);
+  async release(params: { chainId: number; signerIndex: number; escrowKey: string }) {
+    const contract = await this.getContractWithSigner(params.chainId, params.signerIndex);
     const tx = await contract.release(params.escrowKey);
     const receipt = await tx.wait(1);
     return { txHash: tx.hash as string, blockNumber: receipt?.blockNumber ?? null };
   }
 
-  async refund(params: { signerIndex: number; escrowKey: string }) {
-    const contract = await this.getContractWithSignerIndex(params.signerIndex);
+  async refund(params: { chainId: number; signerIndex: number; escrowKey: string }) {
+    const contract = await this.getContractWithSigner(params.chainId, params.signerIndex);
     const tx = await contract.refund(params.escrowKey);
     const receipt = await tx.wait(1);
     return { txHash: tx.hash as string, blockNumber: receipt?.blockNumber ?? null };
   }
 }
-

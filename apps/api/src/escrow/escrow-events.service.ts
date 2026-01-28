@@ -1,5 +1,4 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { ethers } from "ethers";
 import { ChainService } from "../chain/chain.service";
 import { EscrowService } from "./escrow.service";
@@ -20,25 +19,28 @@ export class EscrowEventsService implements OnModuleInit, OnModuleDestroy {
   private listeners: Array<() => void> = [];
 
   constructor(
-    @Inject(ConfigService)
-    private readonly config: ConfigService,
     @Inject(ChainService)
     private readonly chain: ChainService,
     @Inject(EscrowService)
     private readonly escrowService: EscrowService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
-    const contractAddress = this.config.get<string>("P2P_ESCROW_CONTRACT_ADDRESS");
-    if (!contractAddress) {
-      this.logger.warn("P2P_ESCROW_CONTRACT_ADDRESS no configurado, eventos deshabilitados");
+    const defaultChainId = this.chain.getDefaultChainId();
+    if (!this.chain.isChainConfigured(defaultChainId)) {
+      this.logger.warn("Chain por defecto no configurado, eventos deshabilitados");
+      return;
+    }
+    const addr = this.chain.getEscrowAddress(defaultChainId);
+    if (!addr) {
+      this.logger.warn("P2P_ESCROW_CONTRACT_ADDRESS no configurado para chain por defecto, eventos deshabilitados");
       return;
     }
 
     try {
-      this.contract = this.escrowService.getContractReadOnly();
+      this.contract = this.escrowService.getContractReadOnly(defaultChainId);
       this.setupEventListeners();
-      this.logger.log("✅ Servicio de eventos iniciado - escuchando eventos del contrato");
+      this.logger.log(`✅ Servicio de eventos iniciado - chain ${defaultChainId}`);
     } catch (error) {
       this.logger.error("Error iniciando servicio de eventos", error);
     }

@@ -2,6 +2,14 @@
 
 import { type Order, type UserRole } from "@/types/order";
 
+const CHAIN_NAMES: Record<number, string> = {
+  1337: "Ganache (local)",
+  97: "BSC Testnet",
+  56: "BNB Chain",
+  80002: "Polygon Amoy",
+  137: "Polygon",
+};
+
 interface OrderDetailsCardProps {
   order: Order;
   role: UserRole;
@@ -10,6 +18,9 @@ interface OrderDetailsCardProps {
 export function OrderDetailsCard({ order, role }: OrderDetailsCardProps) {
   const counterparty = role === "seller" ? order.buyer : order.seller;
   const counterpartyLabel = role === "seller" ? "Comprador" : "Vendedor";
+  const chainId = order.chainId ?? order.offer?.chainId;
+  const chainName =
+    chainId != null ? (CHAIN_NAMES[chainId] ?? `Chain ${chainId}`) : null;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
@@ -23,6 +34,14 @@ export function OrderDetailsCard({ order, role }: OrderDetailsCardProps) {
       {/* Content */}
       <div className="p-4">
         <div className="grid grid-cols-2 gap-4">
+          {chainName && (
+            <div className="col-span-2">
+              <div className="text-xs font-medium text-zinc-500">Red</div>
+              <div className="mt-1 text-sm font-medium text-zinc-900">
+                {chainName}
+              </div>
+            </div>
+          )}
           {/* Monto */}
           <div>
             <div className="text-xs font-medium text-zinc-500">Monto</div>

@@ -11,6 +11,16 @@ export class OrdersService {
     private readonly escrow: EscrowService,
   ) {}
 
+  async getMy(userId: string) {
+    return this.prisma.order.findMany({
+      where: { OR: [{ buyerId: userId }, { sellerId: userId }] },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        offer: { select: { id: true, side: true, asset: true, fiat: true, chainId: true } },
+      },
+    });
+  }
+
   async get(orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -37,10 +47,12 @@ export class OrdersService {
     }
     if (!buyerAddress) throw new BadRequestException("Buyer has no walletAddress. Login again with email.");
 
+    const chainId = order.chainId ?? (order.offer as { chainId?: number })?.chainId ?? 5777;
     const escrowKey = order.escrowOrderId ?? this.escrow.orderIdToEscrowKey(order.id);
     const amountEth = String(order.amount);
 
     const { txHash } = await this.escrow.fund({
+      chainId,
       signerIndex: sellerIndex,
       escrowKey,
       buyerAddress,
@@ -90,9 +102,11 @@ export class OrdersService {
     if (sellerIndex === null || sellerIndex === undefined) {
       throw new BadRequestException("Seller has no walletIndex. Login again with email.");
     }
+    const chainId = order.chainId ?? (order.offer as { chainId?: number })?.chainId ?? 5777;
     const escrowKey = order.escrowOrderId ?? this.escrow.orderIdToEscrowKey(order.id);
 
     const { txHash } = await this.escrow.release({
+      chainId,
       signerIndex: sellerIndex,
       escrowKey,
     });

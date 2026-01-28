@@ -18,6 +18,7 @@ export interface Order {
   id: string;
   status: OrderStatus;
   amount: number;
+  chainId?: number;
   buyerId: string;
   sellerId: string;
   escrowOrderId?: string | null;
@@ -39,6 +40,7 @@ export interface Order {
     asset: string;
     fiat: string;
     price: number;
+    chainId?: number;
     paymentMethods: string[];
   };
   createdAt?: string;

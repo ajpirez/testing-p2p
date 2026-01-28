@@ -8,6 +8,12 @@ export class OrdersController {
     private readonly ordersService: OrdersService,
   ) {}
 
+  @Get("my")
+  async getMy(@Headers("x-user-id") userId: string) {
+    if (!userId) throw new BadRequestException("Missing x-user-id header");
+    return this.ordersService.getMy(userId);
+  }
+
   @Get(":id")
   async get(@Param("id") id: string) {
     return this.ordersService.get(id);

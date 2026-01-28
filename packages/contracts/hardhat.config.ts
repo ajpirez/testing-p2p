@@ -16,11 +16,32 @@ const config: HardhatUserConfig = {
   networks: {
     ganache: {
       url: ganacheUrl,
+      chainId: 5777,
       accounts: deployerPk
         ? [deployerPk]
         : ganacheMnemonic
           ? { mnemonic: ganacheMnemonic }
           : undefined,
+    },
+    bscTestnet: {
+      url: process.env.BSC_RPC_URL ?? "https://data-seed-prebsc-1-s1.binance.org:8545",
+      chainId: 97,
+      accounts: deployerPk ? [deployerPk] : [],
+    },
+    bsc: {
+      url: process.env.BSC_MAINNET_RPC ?? "https://bsc-dataseed.binance.org/",
+      chainId: 56,
+      accounts: deployerPk ? [deployerPk] : [],
+    },
+    polygonAmoy: {
+      url: process.env.POLYGON_AMOY_RPC ?? "https://rpc-amoy.polygon.technology",
+      chainId: 80002,
+      accounts: deployerPk ? [deployerPk] : [],
+    },
+    polygon: {
+      url: process.env.POLYGON_RPC ?? "https://polygon-rpc.com",
+      chainId: 137,
+      accounts: deployerPk ? [deployerPk] : [],
     },
   },
 };
