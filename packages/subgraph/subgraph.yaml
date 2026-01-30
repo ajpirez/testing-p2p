@@ -1,0 +1,32 @@
+# Manifest de The Graph para indexar P2PEscrow.
+# Reemplazá address y startBlock por los valores de tu red antes de build/deploy.
+# Redes: ganache (graph-node local), bsc, polygon, etc. en Subgraph Studio.
+
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: P2PEscrow
+    network: ganache
+    source:
+      address: "0x6945742937B5C3Dc76E30A069C730e1C07bbF74D"
+      abi: P2PEscrow
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Escrow
+      abis:
+        - name: P2PEscrow
+          file: ./abis/P2PEscrow.json
+      eventHandlers:
+        - event: Funded(indexed bytes32,indexed address,indexed address,uint256)
+          handler: handleFunded
+        - event: Released(indexed bytes32)
+          handler: handleReleased
+        - event: Refunded(indexed bytes32)
+          handler: handleRefunded

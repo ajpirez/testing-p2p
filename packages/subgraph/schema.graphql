@@ -1,0 +1,29 @@
+# Entidades indexadas desde los eventos del contrato P2PEscrow.
+# Permiten consultar por orderId, seller, buyer y estado del escrow.
+
+type Escrow @entity {
+  "orderId en bytes32 (hex)"
+  id: Bytes!
+  "Vendedor que depositó"
+  seller: Bytes!
+  "Comprador que recibirá al release"
+  buyer: Bytes!
+  "Monto en wei"
+  amount: BigInt!
+  "FUNDED | RELEASED | REFUNDED"
+  status: EscrowStatus!
+  "Block en que se hizo fund"
+  fundedAtBlock: BigInt!
+  "Timestamp del bloque de fund (si disponible)"
+  fundedAtTimestamp: BigInt
+  "Block en que se hizo release o refund (null si sigue FUNDED)"
+  closedAtBlock: BigInt
+  "Timestamp del cierre (release/refund)"
+  closedAtTimestamp: BigInt
+}
+
+enum EscrowStatus {
+  FUNDED
+  RELEASED
+  REFUNDED
+}
