@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ethers } from "ethers";
 import { DEFAULT_CHAIN_ID, parseChainsFromEnv, type ChainConfig } from "./chain-config";
+import { getSignerStrategyFor } from "./signer-strategies";
 
 @Injectable()
 export class ChainService {
@@ -15,6 +16,7 @@ export class ChainService {
     const env = {
       GANACHE_RPC_URL: this.config.get<string>("GANACHE_RPC_URL"),
       P2P_ESCROW_CONTRACT_ADDRESS: this.config.get<string>("P2P_ESCROW_CONTRACT_ADDRESS"),
+      P2P_DEFAULT_CHAIN_NAME: this.config.get<string>("P2P_DEFAULT_CHAIN_NAME"),
       P2P_CHAINS: this.config.get<string>("P2P_CHAINS"),
     };
     this.registry = parseChainsFromEnv(env);
@@ -56,16 +58,35 @@ export class ChainService {
     return Array.from(this.registry.keys());
   }
 
-  /** Cuentas en la red por defecto (Ganache); usado por dev-login. */
+  /** Info de cada red configurada (chainId + nombre para UI). El nombre viene solo de la config, sin lógica por red. */
+  getChainInfos(): { chainId: number; name: string }[] {
+    return Array.from(this.registry.entries()).map(([chainId, cfg]) => ({
+      chainId,
+      name: cfg.name?.trim() || `Chain ${chainId}`,
+    }));
+  }
+
+  /** Cuentas en la red por defecto (provider con cuentas desbloqueadas); usado por dev-login. */
   async listAccounts(): Promise<string[]> {
     const provider = this.getProvider(DEFAULT_CHAIN_ID);
     const accounts = await provider.listAccounts();
-    return accounts.map((a: unknown) => (typeof a === "string" ? a : (a as { address?: string })?.address)).filter(Boolean);
+    return accounts
+      .map((a: unknown) => (typeof a === "string" ? a : (a as { address?: string })?.address))
+      .filter((x): x is string => typeof x === "string");
   }
 
-  async getSignerByIndex(chainId: number, index: number): Promise<ethers.JsonRpcSigner> {
+  /**
+   * Obtiene el signer para (chainId, index) usando la estrategia definida en la config de esa cadena.
+   * No depende de nombres de red: si la config tiene signerPk se usa Wallet; si no, provider.getSigner(index).
+   */
+  async getSignerByIndex(chainId: number, index: number): Promise<ethers.Signer> {
+    const cfg = this.registry.get(chainId);
+    if (!cfg) {
+      throw new BadRequestException(`Chain ${chainId} not configured.`);
+    }
     const provider = this.getProvider(chainId);
-    return provider.getSigner(index);
+    const strategy = getSignerStrategyFor(cfg);
+    return strategy.getSigner({ index, provider, config: cfg });
   }
 
   async getAddressByIndex(chainId: number, index: number): Promise<string> {

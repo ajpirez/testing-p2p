@@ -80,5 +80,40 @@ export class DevAuthService {
       },
     };
   }
+
+  /**
+   * Dev-only: crea/obtiene un usuario cuyo wallet es el signer para (chainId, 0).
+   * Sirve para cualquier red configurada con signerPk o con cuentas desbloqueadas.
+   * Ese usuario (walletIndex 0) es el que puede hacer lock/release en esa cadena.
+   */
+  async devLoginByChain(chainId: number, email?: string) {
+    const address = await this.chain.getAddressByIndex(chainId, 0);
+    let user = await this.prisma.user.findFirst({ where: { walletAddress: address } });
+    if (user) {
+      if (user.walletIndex !== 0) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { walletIndex: 0 },
+        });
+      }
+    } else {
+      user = await this.prisma.user.create({
+        data: {
+          email: email?.trim() ? email.trim() : null,
+          walletIndex: 0,
+          walletAddress: address,
+        },
+      });
+    }
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        walletIndex: user.walletIndex,
+        walletAddress: user.walletAddress,
+        createdAt: user.createdAt,
+      },
+    };
+  }
 }
 

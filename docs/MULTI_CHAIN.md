@@ -108,60 +108,58 @@ cd apps/api && pnpm prisma db push
 
 ## 4. API: configuración por red
 
-La API tiene que saber, para cada `chainId`, la **RPC** y la **dirección del contrato**.
+La API tiene que saber, para cada `chainId`, la **RPC** y la **dirección del contrato**. Ninguna clase conoce “si es BSC u otra red”; todo se decide por la **forma de la configuración** (patrón Strategy).
 
 ### 4.1 Variables de entorno
 
-Una forma simple es una variable por red (en `.env` / `.env.example`):
+Red por defecto (chainId 5777):
 
 ```env
-# Red por defecto (local)
 GANACHE_RPC_URL=http://127.0.0.1:7545
-P2P_ESCROW_CONTRACT_ADDRESS=0x...   # contrato en Ganache
-
-# BSC
-BSC_RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545
-BSC_ESCROW_CONTRACT_ADDRESS=0x...
-
-# Polygon Amoy (testnet)
-POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
-POLYGON_AMOY_ESCROW_CONTRACT_ADDRESS=0x...
+P2P_ESCROW_CONTRACT_ADDRESS=0x...
+P2P_DEFAULT_CHAIN_NAME=Local   # opcional: etiqueta para GET /chains
 ```
 
-Otra opción es un único JSON con todas las redes:
+Redes adicionales: un único JSON `P2P_CHAINS` con todas las redes:
 
 ```env
-P2P_CHAINS='{"5777":{"rpc":"http://127.0.0.1:7545","escrow":"0x..."},"97":{"rpc":"https://...","escrow":"0x..."},"137":{"rpc":"https://...","escrow":"0x..."}}'
+P2P_CHAINS='{"5777":{"rpc":"http://127.0.0.1:7545","escrow":"0x...","name":"Local"},"97":{"rpc":"https://...","escrow":"0x...","signerPk":"0x...","name":"Testnet A"}}'
 ```
 
-En el código podés leer eso y construir un mapa `chainId → { rpc, escrowAddress }`.
+Cada entrada puede tener:
+
+- **rpc**, **escrow**: obligatorios.
+- **signerPk** (opcional): clave privada hex (`0x...`). Si existe, el signer se obtiene por **estrategia de clave privada**; si no, por **índice en el provider** (cuentas desbloqueadas).
+- **name** (opcional): etiqueta para listado (GET /chains). El código no contiene nombres de red hardcodeados; vienen solo de config.
+
+### 4.2 Patrón Strategy para signers
+
+Ninguna clase conoce "si es BSC u otra red". La API elige **qué estrategia usar solo por la forma de la config**:
+
+- Si la cadena tiene **signerPk** (hex `0x...`) → estrategia **PrivateKey**: `new ethers.Wallet(signerPk, provider)`. Suele usarse en redes sin cuentas desbloqueadas (testnets/mainnets con una clave configurada).
+- Si no tiene **signerPk** → estrategia **ProviderIndex**: `provider.getSigner(index)`. Válido para redes con cuentas desbloqueadas (ej. Ganache).
+
+Interfaz: `SignerStrategy.getSigner(ctx)` con `ctx = { index, provider, config }`. La estrategia no recibe `chainId` ni nombres de red. `ChainService.getSignerByIndex(chainId, index)` obtiene la config de esa cadena, elige la estrategia con `getSignerStrategyFor(config)` y delega. EscrowService y OrdersService siguen siendo agnósticos a la red concreta.
 
 ---
 
 ## 5. API: ChainService multi‑red
 
-`ChainService` hoy tiene **un** `JsonRpcProvider`. Para varias redes necesitás **uno por chainId**.
+`ChainService` mantiene **un provider por chainId** y usa el **patrón Strategy** para el signer.
 
-Ejemplo de uso objetivo:
+- `getProvider(chainId)`: devuelve (o crea) el `JsonRpcProvider` de esa red.
+- `getSignerByIndex(chainId, index)`: obtiene la config de la cadena, elige la estrategia con `getSignerStrategyFor(config)` (sin usar chainId ni nombres) y devuelve el signer.
+
+Ejemplo de uso (agnóstico a la red):
 
 ```ts
-// Uso deseado
-chain.getProvider(5777)   // Ganache
-chain.getProvider(56)     // BSC
+chain.getProvider(5777)
+chain.getProvider(97)
 chain.getSignerByIndex(5777, 0)
-chain.getSignerByIndex(56, 0)  // aquí “índice” solo tiene sentido si tenés cuentas inyectadas en esa RPC (ej. Ganache). En BSC/Polygon normalmente usaríais wallets externas
+chain.getSignerByIndex(97, 0)
 ```
 
-Implementación posible:
-
-- En el constructor leés la config (env o `P2P_CHAINS`) y creás un mapa:
-  - `private readonly providers = new Map<number, ethers.JsonRpcProvider>()`
-- `getProvider(chainId: number): ethers.JsonRpcProvider`  
-  - devuelve `this.providers.get(chainId)` o lanza si esa red no está configurada.
-- `getSignerByIndex(chainId: number, index: number)`  
-  - usa `getProvider(chainId)` y hace `provider.getSigner(index)` (válido sobre todo para Ganache con cuentas desbloqueadas).
-
-Así, todo lo que hoy usa `this.chain.getProvider()` o `getSignerByIndex` tendría que recibir además el `chainId` (por ejemplo del `order.chainId` o `offer.chainId`).
+- **GET /chains**: devuelve `getChainInfos()` → `{ chainId, name }[]`. El `name` viene de la config (`P2P_DEFAULT_CHAIN_NAME`, `P2P_CHAINS[].name`); no hay mapa hardcodeado de "97 = BSC" en el código.
 
 ---
 
@@ -211,6 +209,8 @@ Mientras tanto, en **shared** (o en el backend) el schema de “crear oferta” 
 ---
 
 ## 8. Dev‑login y cuentas por red
+
+**POST /auth/dev-login-by-chain**: body `{ chainId: number; email?: string }`. Obtiene la dirección con `getAddressByIndex(chainId, 0)`, busca o crea usuario por esa wallet en esa red. Agnóstico a la red: no hay lógica "si es BSC" ni nombres hardcodeados; el signer se resuelve por la estrategia de esa cadena (signerPk o índice).
 
 Hoy el dev-login usa **una** RPC (Ganache) y asigna `walletIndex` de esa RPC. Con varias redes tenés dos caminos:
 
