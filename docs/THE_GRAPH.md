@@ -86,6 +86,78 @@ query {
 
 Si no ves datos: asegurate de que el contrato esté desplegado, que hayas llamado `fund` (y opcionalmente `release` o `refund`) **después** del `startBlock`, y de darle unos segundos al indexador para procesar los bloques.
 
+### Probar todo (graph-node ya corriendo)
+
+Seguí estos pasos en orden.
+
+**1. Desplegar el subgraph al graph-node**
+
+```bash
+cd D:\Trabajo\Estudio\web3\packages\subgraph
+pnpm run deploy:local
+```
+
+Cuando pida version label, poné por ejemplo `0.0.1` y Enter. Debería decir "Build completed" y "Deployed to ...".
+
+**2. Tener Ganache + contrato + API**
+
+- Ganache corriendo (puerto 7545).
+- P2PEscrow desplegado en Ganache; la dirección en `subgraph.yaml` debe coincidir con la de `apps/api/.env` (`P2P_ESCROW_CONTRACT_ADDRESS`).
+- API levantada: `cd apps/api && pnpm start` (o `pnpm start:dev`).
+
+**3. Generar eventos (fund → release)**
+
+- **Dev-login** (seller): `POST http://localhost:4000/auth/dev-login-by-chain` con body `{ "chainId": 5777 }`. Anotá el `id` del usuario (seller).
+- **Crear oferta** y **tomar la orden** (o usar una orden existente). Anotá el `id` de la orden.
+- **Lock funds** (emite `Funded`):  
+  `POST http://localhost:4000/orders/:orderId/lock-funds`  
+  Header: `x-user-id: <seller-id>`  
+  Body según tu API (ej. `{ "amountEth": "0.01" }` si lo pide).
+- **Release** (emite `Released`):  
+  `POST http://localhost:4000/orders/:orderId/release`  
+  Header: `x-user-id: <seller-id>`
+
+**4. Esperar y consultar el subgraph**
+
+Esperá 10–30 segundos para que graph-node indexe. Luego:
+
+- **GraphiQL (interfaz en el navegador):** abrí **http://localhost:8000/**  
+  En la pantalla podés elegir el subgraph `p2p-escrow` (si aparece en un desplegable) o la URL del subgraph ya rellenada. Ahí escribís y ejecutás las queries.
+- **Endpoint del subgraph (para POST/API):**  
+  `http://localhost:8000/subgraphs/name/p2p-escrow`  
+  Esa URL no muestra una página bonita en el navegador; se usa para enviar queries GraphQL por POST (curl, Postman, tu app). Ejemplo: listar todos los escrows:
+
+```graphql
+query {
+  escrows(first: 10) {
+    id
+    seller
+    buyer
+    amount
+    status
+    fundedAtBlock
+    fundedAtTimestamp
+    closedAtTimestamp
+  }
+}
+```
+
+O solo los que siguen en FUNDED:
+
+```graphql
+query {
+  escrows(where: { status: "FUNDED" }) {
+    id
+    seller
+    buyer
+    amount
+    status
+  }
+}
+```
+
+El `id` de cada escrow es el `orderId` (bytes32) en hex; si tenés el `escrowOrderId` de una orden en la API, usalo como `id` en la query `escrow(id: "0x...")` para ver ese registro.
+
 ---
 
 ## Qué indexa el subgraph
