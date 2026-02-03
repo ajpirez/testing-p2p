@@ -18,7 +18,8 @@ function applyFunded(
   buyer: Address,
   amount: BigInt,
   blockNumber: BigInt,
-  blockTimestamp: BigInt
+  blockTimestamp: BigInt,
+  txHash: Bytes
 ): void {
   let escrow = Escrow.load(orderId);
   if (escrow == null) {
@@ -30,24 +31,37 @@ function applyFunded(
   escrow.status = "FUNDED";
   escrow.fundedAtBlock = blockNumber;
   escrow.fundedAtTimestamp = blockTimestamp;
+  escrow.fundTxHash = txHash;
   escrow.save();
 }
 
-function applyReleased(orderId: Bytes, blockNumber: BigInt, blockTimestamp: BigInt): void {
+function applyReleased(
+  orderId: Bytes,
+  blockNumber: BigInt,
+  blockTimestamp: BigInt,
+  txHash: Bytes
+): void {
   const escrow = Escrow.load(orderId);
   if (escrow == null) return;
   escrow.status = "RELEASED";
   escrow.closedAtBlock = blockNumber;
   escrow.closedAtTimestamp = blockTimestamp;
+  escrow.closedTxHash = txHash;
   escrow.save();
 }
 
-function applyRefunded(orderId: Bytes, blockNumber: BigInt, blockTimestamp: BigInt): void {
+function applyRefunded(
+  orderId: Bytes,
+  blockNumber: BigInt,
+  blockTimestamp: BigInt,
+  txHash: Bytes
+): void {
   const escrow = Escrow.load(orderId);
   if (escrow == null) return;
   escrow.status = "REFUNDED";
   escrow.closedAtBlock = blockNumber;
   escrow.closedAtTimestamp = blockTimestamp;
+  escrow.closedTxHash = txHash;
   escrow.save();
 }
 
@@ -58,16 +72,27 @@ export function handleFunded(event: Funded): void {
     event.params.buyer,
     event.params.amount,
     event.block.number,
-    event.block.timestamp
+    event.block.timestamp,
+    event.transaction.hash
   );
 }
 
 export function handleReleased(event: Released): void {
-  applyReleased(event.params.orderId, event.block.number, event.block.timestamp);
+  applyReleased(
+    event.params.orderId,
+    event.block.number,
+    event.block.timestamp,
+    event.transaction.hash
+  );
 }
 
 export function handleRefunded(event: Refunded): void {
-  applyRefunded(event.params.orderId, event.block.number, event.block.timestamp);
+  applyRefunded(
+    event.params.orderId,
+    event.block.number,
+    event.block.timestamp,
+    event.transaction.hash
+  );
 }
 
 export function handleFundedERC20(event: FundedERC20): void {
@@ -77,14 +102,25 @@ export function handleFundedERC20(event: FundedERC20): void {
     event.params.buyer,
     event.params.amount,
     event.block.number,
-    event.block.timestamp
+    event.block.timestamp,
+    event.transaction.hash
   );
 }
 
 export function handleReleasedERC20(event: ReleasedERC20): void {
-  applyReleased(event.params.orderId, event.block.number, event.block.timestamp);
+  applyReleased(
+    event.params.orderId,
+    event.block.number,
+    event.block.timestamp,
+    event.transaction.hash
+  );
 }
 
 export function handleRefundedERC20(event: RefundedERC20): void {
-  applyRefunded(event.params.orderId, event.block.number, event.block.timestamp);
+  applyRefunded(
+    event.params.orderId,
+    event.block.number,
+    event.block.timestamp,
+    event.transaction.hash
+  );
 }

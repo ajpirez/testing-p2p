@@ -134,6 +134,23 @@ export class Escrow extends Entity {
     }
   }
 
+  get fundTxHash(): Bytes | null {
+    let value = this.get("fundTxHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set fundTxHash(value: Bytes | null) {
+    if (!value) {
+      this.unset("fundTxHash");
+    } else {
+      this.set("fundTxHash", Value.fromBytes(<Bytes>value));
+    }
+  }
+
   get closedAtBlock(): BigInt | null {
     let value = this.get("closedAtBlock");
     if (!value || value.kind == ValueKind.NULL) {
@@ -165,6 +182,23 @@ export class Escrow extends Entity {
       this.unset("closedAtTimestamp");
     } else {
       this.set("closedAtTimestamp", Value.fromBigInt(<BigInt>value));
+    }
+  }
+
+  get closedTxHash(): Bytes | null {
+    let value = this.get("closedTxHash");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set closedTxHash(value: Bytes | null) {
+    if (!value) {
+      this.unset("closedTxHash");
+    } else {
+      this.set("closedTxHash", Value.fromBytes(<Bytes>value));
     }
   }
 }

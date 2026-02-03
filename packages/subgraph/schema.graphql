@@ -16,10 +16,14 @@ type Escrow @entity {
   fundedAtBlock: BigInt!
   "Timestamp del bloque de fund (si disponible)"
   fundedAtTimestamp: BigInt
+  "Hash de la tx de fund"
+  fundTxHash: Bytes
   "Block en que se hizo release o refund (null si sigue FUNDED)"
   closedAtBlock: BigInt
   "Timestamp del cierre (release/refund)"
   closedAtTimestamp: BigInt
+  "Hash de la tx de release o refund"
+  closedTxHash: Bytes
 }
 
 enum EscrowStatus {
