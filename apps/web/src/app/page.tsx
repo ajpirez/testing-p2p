@@ -47,7 +47,7 @@ export default function Home() {
 
   const [chains, setChains] = useState<Chain[]>([]);
   const [form, setForm] = useState<CreateOfferInput>({
-    chainId: 5777,
+    chainId: 1337,
     side: "SELL",
     asset: "USDT",
     fiat: "EUR",
@@ -59,7 +59,7 @@ export default function Home() {
 
   const paymentOptions: PaymentMethodType[] = useMemo(
     () => ["BANK_TRANSFER", "BIZUM", "PAYPAL", "CASH"],
-    [],
+    []
   );
 
   useEffect(() => {
@@ -210,7 +210,7 @@ export default function Home() {
     const c = chains.find((x) => x.chainId === chainId);
     if (c) return c.name;
     const names: Record<number, string> = {
-      5777: "Ganache",
+      1337: "Ganache",
       97: "BSC Testnet",
       56: "BNB",
       80002: "Polygon Amoy",
@@ -334,7 +334,9 @@ export default function Home() {
                   className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm hover:bg-zinc-100 transition-colors"
                 >
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
+                      order.status
+                    )}`}
                   >
                     {order.status}
                   </span>
@@ -390,7 +392,7 @@ export default function Home() {
                     ))
                   ) : (
                     <>
-                      <option value="5777">Ganache (local)</option>
+                      <option value="1337">Ganache (local)</option>
                       <option value="97">BSC Testnet</option>
                       <option value="56">BNB Chain</option>
                       <option value="80002">Polygon Amoy</option>
@@ -443,12 +445,13 @@ export default function Home() {
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      fiat: e.target.value as "EUR" | "USD",
+                      fiat: e.target.value as "EUR" | "USD" | "CUP",
                     }))
                   }
                 >
                   <option value="EUR">EUR</option>
                   <option value="USD">USD</option>
+                  <option value="CUP">CUP</option>
                 </select>
               </label>
 

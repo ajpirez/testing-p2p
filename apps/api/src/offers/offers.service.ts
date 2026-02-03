@@ -39,14 +39,14 @@ export class OffersService {
     });
   }
 
-  async take(buyerId: string, input: TakeOfferInput) {
-    const buyer = await this.prisma.user.findUnique({ where: { id: buyerId } });
-    if (!buyer) throw new BadRequestException("Unknown user. Use dev-login first.");
+  async take(takerUserId: string, input: TakeOfferInput) {
+    const taker = await this.prisma.user.findUnique({ where: { id: takerUserId } });
+    if (!taker) throw new BadRequestException("Unknown user. Use dev-login first.");
 
     const offer = await this.prisma.offer.findUnique({ where: { id: input.offerId } });
     if (!offer || !offer.isActive) throw new NotFoundException("Offer not found");
 
-    if (offer.makerId === buyerId) {
+    if (offer.makerId === takerUserId) {
       throw new BadRequestException("You cannot take your own offer");
     }
 
@@ -62,7 +62,10 @@ export class OffersService {
     });
     if (updated.count !== 1) throw new BadRequestException("Offer already taken");
 
-    const sellerId = offer.makerId;
+    // Oferta SELL = yo (maker) vendo → alguien compra. Maker = seller, taker = buyer.
+    // Oferta BUY  = yo (maker) compro → alguien me vende. Maker = buyer, taker = seller.
+    const sellerId = offer.side === "SELL" ? offer.makerId : takerUserId;
+    const buyerId = offer.side === "SELL" ? takerUserId : offer.makerId;
 
     return this.prisma.order.create({
       data: {

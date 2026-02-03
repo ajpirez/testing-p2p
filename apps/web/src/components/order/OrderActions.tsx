@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { type Order, type UserRole, getStatusConfig } from "@/types/order";
+import {
+  type AllowanceCheck,
+  type Order,
+  type UserRole,
+  getStatusConfig,
+} from "@/types/order";
 
 interface OrderActionsProps {
   order: Order;
   role: UserRole;
+  allowanceCheck?: AllowanceCheck;
+  onApproveToken?: () => Promise<void>;
+  approveLoading?: boolean;
   onLockFunds: () => Promise<void>;
   onMarkPaid: () => Promise<void>;
   onRelease: () => Promise<void>;
@@ -15,6 +23,9 @@ interface OrderActionsProps {
 export function OrderActions({
   order,
   role,
+  allowanceCheck,
+  onApproveToken,
+  approveLoading = false,
   onLockFunds,
   onMarkPaid,
   onRelease,
@@ -22,12 +33,19 @@ export function OrderActions({
 }: OrderActionsProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
+  const needsApprove =
+    role === "seller" &&
+    allowanceCheck &&
+    !allowanceCheck.notApplicable &&
+    !allowanceCheck.sufficient &&
+    "asset" in allowanceCheck;
+
   const config = getStatusConfig(order.status);
   const roleConfig = role === "seller" ? config.seller : config.buyer;
 
   const handleAction = async (
     actionName: string,
-    handler: () => Promise<void>,
+    handler: () => Promise<void>
   ) => {
     setLoading(actionName);
     try {
@@ -102,8 +120,60 @@ export function OrderActions({
         Actualizar
       </button>
 
+      {/* Aprobar token ERC-20 (USDT/USDC) antes de Lock funds si hace falta */}
+      {hasAction &&
+        roleConfig.action === "lock-funds" &&
+        needsApprove &&
+        onApproveToken && (
+          <>
+            <p className="w-full text-xs text-zinc-500 sm:w-auto">
+              Con USDT/USDC debes autorizar al escrow una vez en tu wallet;
+              después podrás bloquear fondos.
+            </p>
+            <button
+              className={getButtonStyles("warning")}
+              onClick={() => handleAction("approve", onApproveToken)}
+              disabled={loading !== null || approveLoading}
+            >
+              {loading === "approve" || approveLoading ? (
+                <>
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  <span>Aprobando...</span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    Aprobar{" "}
+                    {"asset" in (allowanceCheck ?? {})
+                      ? (allowanceCheck as { asset: string }).asset
+                      : "token"}
+                  </span>
+                </>
+              )}
+            </button>
+          </>
+        )}
+
       {/* Acción principal según el rol y estado */}
-      {hasAction && roleConfig.action === "lock-funds" && (
+      {hasAction && roleConfig.action === "lock-funds" && !needsApprove && (
         <button
           className={getButtonStyles(roleConfig.variant)}
           onClick={() => handleAction("lock-funds", onLockFunds)}

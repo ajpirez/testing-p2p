@@ -33,7 +33,7 @@ GANACHE_RPC_URL=http://127.0.0.1:7545
 P2P_ESCROW_CONTRACT_ADDRESS=0x...
 ```
 
-Si usas **Ganache GUI** con chainId **5777** y otro puerto (ej. 7545), asegúrate de que `GANACHE_RPC_URL` apunte a ese puerto. El proyecto usa por defecto `chainId = 5777` para Ganache GUI.
+Si usas **Ganache GUI** con chainId **1337** y otro puerto (ej. 7545), asegúrate de que `GANACHE_RPC_URL` apunte a ese puerto. El proyecto usa por defecto `chainId = 1337` para Ganache GUI.
 
 ---
 
@@ -87,7 +87,7 @@ Copia esa dirección y pégala en `apps/api/.env` como:
 P2P_ESCROW_CONTRACT_ADDRESS=0x1234567890abcdef...
 ```
 
-Si tu Ganache usa **chainId 5777** (típico en Ganache GUI), en `packages/contracts/hardhat.config.ts` la red `ganache` debe tener `chainId: 5777` si quieres coincidencia; si no, el API ya está preparado para usar 5777 por defecto en dev.
+Si tu Ganache usa **chainId 1337** (típico en Ganache GUI), en `packages/contracts/hardhat.config.ts` la red `ganache` debe tener `chainId: 1337` si quieres coincidencia; si no, el API ya está preparado para usar 1337 por defecto en dev.
 
 ---
 
@@ -135,7 +135,7 @@ El script hace de forma automática:
 
 1. Login **alice** (vendedora)
 2. Login **bob** (comprador)
-3. Alice crea oferta **SELL** (chainId por defecto 5777, o `P2P_CHAIN_ID` si lo defines)
+3. Alice crea oferta **SELL** (chainId por defecto 1337, o `P2P_CHAIN_ID` si lo defines)
 4. Bob toma la oferta
 5. Alice hace **lock funds** (on-chain)
 6. Bob marca **pagado**
@@ -150,12 +150,12 @@ Si algo falla, revisa:
 Variables útiles para el script:
 
 - `API_BASE_URL` → por defecto `http://127.0.0.1:4000`
-- `P2P_CHAIN_ID` → por defecto `5777` (Ganache GUI)
+- `P2P_CHAIN_ID` → por defecto `1337` (Ganache GUI)
 
 Ejemplo con API en otro host:
 
 ```bash
-API_BASE_URL=http://127.0.0.1:4000 P2P_CHAIN_ID=5777 pnpm test:flow
+API_BASE_URL=http://127.0.0.1:4000 P2P_CHAIN_ID=1337 pnpm test:flow
 ```
 
 ---

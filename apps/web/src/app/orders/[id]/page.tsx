@@ -9,7 +9,13 @@ import {
   OrderActions,
   OrderDetailsCard,
 } from "@/components/order";
-import { type Order, type OrderStatus, getUserRole } from "@/types/order";
+import {
+  type AllowanceCheck,
+  type Order,
+  type OrderStatus,
+  getUserRole,
+} from "@/types/order";
+import { approveErc20FromWallet } from "@/lib/approve-erc20";
 
 type LocalUser = {
   id: string;
@@ -33,6 +39,11 @@ export default function OrderPage({
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [allowanceCheck, setAllowanceCheck] = useState<AllowanceCheck | null>(
+    null
+  );
+  const [approveLoading, setApproveLoading] = useState(false);
+  const approvedJustNowRef = useRef(false);
 
   const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -98,6 +109,136 @@ export default function OrderPage({
 
   // Determinar rol del usuario
   const role = order ? getUserRole(user?.id, order) : "spectator";
+
+  // Allowance para órdenes ERC-20 (USDT/USDC): seller con acción lock-funds
+  // Dependemos de order.id/status/asset para no re-ejecutar en cada poll (evitar que vuelva a "Aprobar")
+  useEffect(() => {
+    if (!order || role !== "seller" || order.status !== "CREATED") {
+      setAllowanceCheck(null);
+      return;
+    }
+    const asset = (order.offer as { asset?: string })?.asset;
+    if (asset !== "USDT" && asset !== "USDC") {
+      setAllowanceCheck({ notApplicable: true });
+      return;
+    }
+    let cancelled = false;
+    fetch(`${apiBase}/orders/${id}/allowance`)
+      .then((r) => r.json())
+      .then(
+        (data: {
+          notApplicable?: boolean;
+          sufficient?: boolean;
+          allowance?: string;
+          amountRequired?: string;
+        }) => {
+          if (cancelled) return;
+          // No sobrescribir si acabamos de hacer approve (optimistic update)
+          if (approvedJustNowRef.current) return;
+          if (data.notApplicable) {
+            setAllowanceCheck({ notApplicable: true });
+            return;
+          }
+          setAllowanceCheck({
+            notApplicable: false,
+            sufficient: data.sufficient ?? false,
+            allowance: data.allowance ?? "0",
+            amountRequired: data.amountRequired ?? "0",
+            asset: asset as string,
+          });
+        }
+      )
+      .catch(() => {
+        if (!cancelled) setAllowanceCheck(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    apiBase,
+    id,
+    order?.id,
+    order?.status,
+    role,
+    (order?.offer as { asset?: string })?.asset,
+  ]);
+
+  async function handleApproveToken() {
+    if (!order || allowanceCheck === null || allowanceCheck.notApplicable)
+      return;
+    if (!("amountRequired" in allowanceCheck) || !("asset" in allowanceCheck))
+      return;
+    if (!user?.id) return;
+    const chainId =
+      order.chainId ?? (order.offer as { chainId?: number })?.chainId ?? 1337;
+    setApproveLoading(true);
+    try {
+      // Igual que test-flow: intentar que el backend firme el approve (cuenta del seller en dev)
+      const apiApproveRes = await fetch(
+        `${apiBase}/orders/${id}/approve-token`,
+        { method: "POST", headers: { "x-user-id": user.id } }
+      );
+      if (apiApproveRes.ok) {
+        approvedJustNowRef.current = true;
+        setAllowanceCheck((prev) => {
+          if (!prev || prev.notApplicable || !("asset" in prev)) return prev;
+          return { ...prev, sufficient: true };
+        });
+        alert('Aprobación correcta. Ya puedes pulsar "Bloquear fondos".');
+        setApproveLoading(false);
+        return;
+      }
+
+      // Si el API no pudo (ej. seller usa otra wallet), usar MetaMask
+      const configRes = await fetch(
+        `${apiBase}/chains/${chainId}/escrow-config`
+      );
+      if (!configRes.ok) throw new Error("No escrow config for this chain");
+      const config = (await configRes.json()) as {
+        usdt?: { escrowAddress: string; tokenAddress: string };
+        usdc?: { escrowAddress: string; tokenAddress: string };
+      };
+      const key = allowanceCheck.asset === "USDT" ? "usdt" : "usdc";
+      const cfg = config[key];
+      if (!cfg)
+        throw new Error(
+          `ERC-20 escrow not configured for ${allowanceCheck.asset}`
+        );
+      await approveErc20FromWallet({
+        tokenAddress: cfg.tokenAddress as `0x${string}`,
+        spenderAddress: cfg.escrowAddress as `0x${string}`,
+        amount: BigInt(allowanceCheck.amountRequired),
+        chainId,
+      });
+
+      approvedJustNowRef.current = true;
+      setAllowanceCheck((prev) => {
+        if (!prev || prev.notApplicable || !("asset" in prev)) return prev;
+        return { ...prev, sufficient: true };
+      });
+
+      const allowRes = await fetch(`${apiBase}/orders/${id}/allowance`);
+      const allowData = await allowRes.json();
+      if (!allowData.notApplicable) {
+        setAllowanceCheck((prev) => {
+          if (!prev || prev.notApplicable || !("asset" in prev)) return prev;
+          return {
+            ...prev,
+            sufficient: allowData.sufficient ?? true,
+            allowance: allowData.allowance ?? prev.amountRequired,
+            amountRequired: allowData.amountRequired ?? prev.amountRequired,
+          };
+        });
+      }
+      // Permitir que futuros fetches del useEffect actualicen de nuevo
+      approvedJustNowRef.current = false;
+      alert('Aprobación correcta. Ya puedes pulsar "Bloquear fondos".');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setApproveLoading(false);
+    }
+  }
 
   // Handlers para acciones
   async function lockFunds() {
@@ -214,6 +355,9 @@ export default function OrderPage({
               <OrderActions
                 order={order}
                 role={role}
+                allowanceCheck={allowanceCheck ?? undefined}
+                onApproveToken={handleApproveToken}
+                approveLoading={approveLoading}
                 onLockFunds={lockFunds}
                 onMarkPaid={markPaid}
                 onRelease={release}

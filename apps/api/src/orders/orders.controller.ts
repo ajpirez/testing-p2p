@@ -19,6 +19,11 @@ export class OrdersController {
     return this.ordersService.get(id);
   }
 
+  @Get(":id/allowance")
+  async getAllowance(@Param("id") id: string) {
+    return this.ordersService.getAllowance(id);
+  }
+
   @Post(":id/mark-paid")
   async markPaid(@Param("id") id: string, @Headers("x-user-id") userId: string) {
     if (!userId) throw new BadRequestException("Missing x-user-id header");
@@ -29,6 +34,12 @@ export class OrdersController {
   async release(@Param("id") id: string, @Headers("x-user-id") userId: string) {
     if (!userId) throw new BadRequestException("Missing x-user-id header");
     return this.ordersService.release(id, userId);
+  }
+
+  @Post(":id/approve-token")
+  async approveToken(@Param("id") id: string, @Headers("x-user-id") userId: string) {
+    if (!userId) throw new BadRequestException("Missing x-user-id header");
+    return this.ordersService.approveTokenForOrder(id, userId);
   }
 
   @Post(":id/lock-funds")

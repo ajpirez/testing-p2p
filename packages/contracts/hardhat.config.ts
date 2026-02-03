@@ -3,6 +3,10 @@ import "@nomicfoundation/hardhat-toolbox";
 import type { HardhatUserConfig } from "hardhat/config";
 
 const ganacheUrl = process.env.GANACHE_RPC_URL ?? "http://127.0.0.1:7545";
+// Por defecto 1337 (Ganache). Sobrescribe con GANACHE_CHAIN_ID solo si usas otra red.
+const ganacheChainId = process.env.GANACHE_CHAIN_ID
+  ? parseInt(process.env.GANACHE_CHAIN_ID, 10)
+  : 1337;
 const deployerPk = process.env.DEPLOYER_PRIVATE_KEY;
 const ganacheMnemonic = process.env.GANACHE_MNEMONIC;
 
@@ -16,7 +20,7 @@ const config: HardhatUserConfig = {
   networks: {
     ganache: {
       url: ganacheUrl,
-      chainId: 5777,
+      chainId: ganacheChainId,
       accounts: deployerPk
         ? [deployerPk]
         : ganacheMnemonic

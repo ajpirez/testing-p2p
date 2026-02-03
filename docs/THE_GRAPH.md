@@ -107,7 +107,7 @@ Cuando pida version label, poné por ejemplo `0.0.1` y Enter. Debería decir "Bu
 
 **3. Generar eventos (fund → release)**
 
-- **Dev-login** (seller): `POST http://localhost:4000/auth/dev-login-by-chain` con body `{ "chainId": 5777 }`. Anotá el `id` del usuario (seller).
+- **Dev-login** (seller): `POST http://localhost:4000/auth/dev-login-by-chain` con body `{ "chainId": 1337 }`. Anotá el `id` del usuario (seller).
 - **Crear oferta** y **tomar la orden** (o usar una orden existente). Anotá el `id` de la orden.
 - **Lock funds** (emite `Funded`):  
   `POST http://localhost:4000/orders/:orderId/lock-funds`  

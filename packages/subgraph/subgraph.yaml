@@ -1,6 +1,6 @@
-# Manifest de The Graph para indexar P2PEscrow.
+# Manifest de The Graph para indexar P2PEscrow (nativo) y P2PEscrowERC20 (USDT/USDC).
 # Reemplazá address y startBlock por los valores de tu red antes de build/deploy.
-# Redes: ganache (graph-node local), bsc, polygon, etc. en Subgraph Studio.
+# Para ERC20: pon la dirección del escrow USDT (y/o USDC) desplegado con deploy-erc20-all.
 
 specVersion: 1.0.0
 schema:
@@ -10,7 +10,7 @@ dataSources:
     name: P2PEscrow
     network: ganache
     source:
-      address: "0x6945742937B5C3Dc76E30A069C730e1C07bbF74D"
+      address: "0x13c764643E05b8866c7935E18e7DFC76A6f06413"
       abi: P2PEscrow
       startBlock: 0
     mapping:
@@ -30,3 +30,29 @@ dataSources:
           handler: handleReleased
         - event: Refunded(indexed bytes32)
           handler: handleRefunded
+
+  - kind: ethereum/contract
+    name: P2PEscrowERC20
+    network: ganache
+    source:
+      # Dirección del P2PEscrowERC20 (USDT o USDC). Salida de deploy-erc20-all.ts
+      address: "0x40d5B60dA685a57b5EbfC22e77e9441fF781c229"
+      abi: P2PEscrowERC20
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Escrow
+      abis:
+        - name: P2PEscrowERC20
+          file: ./abis/P2PEscrowERC20.json
+      eventHandlers:
+        - event: Funded(indexed bytes32,indexed address,indexed address,uint256)
+          handler: handleFundedERC20
+        - event: Released(indexed bytes32)
+          handler: handleReleasedERC20
+        - event: Refunded(indexed bytes32)
+          handler: handleRefundedERC20

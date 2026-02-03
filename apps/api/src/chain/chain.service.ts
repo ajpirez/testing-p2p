@@ -32,7 +32,7 @@ export class ChainService {
       const cfg = this.registry.get(chainId);
       if (!cfg) {
         throw new BadRequestException(
-          `Chain ${chainId} not configured. Use GANACHE_RPC_URL + P2P_ESCROW_CONTRACT_ADDRESS for 5777, or P2P_CHAINS for others.`,
+          `Chain ${chainId} not configured. Use GANACHE_RPC_URL + P2P_ESCROW_CONTRACT_ADDRESS for 1337, or P2P_CHAINS for others.`,
         );
       }
       p = new ethers.JsonRpcProvider(cfg.rpcUrl);
@@ -49,8 +49,68 @@ export class ChainService {
     return cfg.escrowAddress;
   }
 
+  /**
+   * Escrow contract address for the given asset (USDT or USDC = ERC-20 escrow).
+   * Throws if chain or ERC-20 escrow for that asset is not configured.
+   */
+  getEscrowAddressForAsset(chainId: number, asset: "USDT" | "USDC"): string {
+    const cfg = this.registry.get(chainId);
+    if (!cfg) {
+      throw new BadRequestException(`Chain ${chainId} not configured.`);
+    }
+    const addr = asset === "USDT" ? cfg.escrowUsdtAddress : cfg.escrowUsdcAddress;
+    if (!addr) {
+      throw new BadRequestException(
+        `ERC-20 escrow for ${asset} not configured for chain ${chainId}. Set escrowUsdt/tokenUsdt or escrowUsdc/tokenUsdc in P2P_CHAINS.`,
+      );
+    }
+    return addr;
+  }
+
+  /**
+   * Token contract address for the given asset (USDT or USDC).
+   */
+  getTokenAddressForAsset(chainId: number, asset: "USDT" | "USDC"): string {
+    const cfg = this.registry.get(chainId);
+    if (!cfg) {
+      throw new BadRequestException(`Chain ${chainId} not configured.`);
+    }
+    const addr = asset === "USDT" ? cfg.tokenUsdtAddress : cfg.tokenUsdcAddress;
+    if (!addr) {
+      throw new BadRequestException(
+        `Token ${asset} not configured for chain ${chainId}. Set tokenUsdt or tokenUsdc in P2P_CHAINS.`,
+      );
+    }
+    return addr;
+  }
+
   isChainConfigured(chainId: number): boolean {
     return this.registry.has(chainId);
+  }
+
+  /**
+   * Escrow + token addresses per asset for a chain (for frontend approval flow).
+   * Only includes assets that are configured for the chain.
+   */
+  getEscrowConfig(chainId: number): {
+    usdt?: { escrowAddress: string; tokenAddress: string };
+    usdc?: { escrowAddress: string; tokenAddress: string };
+  } {
+    const cfg = this.registry.get(chainId);
+    if (!cfg) {
+      throw new BadRequestException(`Chain ${chainId} not configured.`);
+    }
+    const out: {
+      usdt?: { escrowAddress: string; tokenAddress: string };
+      usdc?: { escrowAddress: string; tokenAddress: string };
+    } = {};
+    if (cfg.escrowUsdtAddress && cfg.tokenUsdtAddress) {
+      out.usdt = { escrowAddress: cfg.escrowUsdtAddress, tokenAddress: cfg.tokenUsdtAddress };
+    }
+    if (cfg.escrowUsdcAddress && cfg.tokenUsdcAddress) {
+      out.usdc = { escrowAddress: cfg.escrowUsdcAddress, tokenAddress: cfg.tokenUsdcAddress };
+    }
+    return out;
   }
 
   /** Lista de chainIds configurados (para validar ofertas). */

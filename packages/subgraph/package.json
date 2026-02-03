@@ -7,7 +7,10 @@
     "build": "graph build",
     "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/",
     "create:local": "graph create --node http://127.0.0.1:8020/ p2p-escrow",
-    "deploy:local": "graph deploy --node http://127.0.0.1:8020/ --ipfs http://localhost:5001 p2p-escrow"
+    "create:local:erc20": "graph create --node http://127.0.0.1:8020/ p2p-escrow-erc20",
+    "deploy:local": "graph deploy --node http://127.0.0.1:8020/ --ipfs http://localhost:5001 p2p-escrow",
+    "deploy:erc20": "graph deploy --node https://api.studio.thegraph.com/deploy/ p2p-escrow-erc20",
+    "deploy:local:erc20": "graph deploy --node http://127.0.0.1:8020/ --ipfs http://localhost:5001 p2p-escrow-erc20"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.79.0",

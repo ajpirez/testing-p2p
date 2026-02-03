@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const OfferSideSchema = z.enum(["BUY", "SELL"]);
 export const CurrencyCodeSchema = z.enum(["USDT", "USDC"]);
-export const FiatCodeSchema = z.enum(["EUR", "USD"]);
+export const FiatCodeSchema = z.enum(["EUR", "USD", "CUP"]);
 export const PaymentMethodTypeSchema = z.enum([
   "BANK_TRANSFER",
   "BIZUM",
@@ -10,7 +10,7 @@ export const PaymentMethodTypeSchema = z.enum([
   "CASH",
 ]);
 
-/** chainId: 5777=Ganache, 97=BSC Testnet, 56=BSC, 80002=Polygon Amoy, 137=Polygon */
+/** chainId: 1337=Ganache, 97=BSC Testnet, 56=BSC, 80002=Polygon Amoy, 137=Polygon */
 export const CreateOfferSchema = z.object({
   chainId: z.number().int().positive(),
   side: OfferSideSchema,

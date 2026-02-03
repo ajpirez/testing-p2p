@@ -23,7 +23,7 @@ const config: HardhatUserConfig = {
   networks: {
     ganache: {
       url: process.env.GANACHE_RPC_URL ?? "http://127.0.0.1:7545",
-      chainId: 5777, // Ganache suele usar 5777
+      chainId: 1337, // Ganache suele usar 1337
       accounts: /* ... */,
     },
     bscTestnet: {
@@ -81,7 +81,7 @@ model Offer {
   id             String   @id @default(uuid())
   makerId        String
   maker          User     @relation(...)
-  chainId        Int      // 5777=Ganache, 56=BSC, 137=Polygon, etc.
+  chainId        Int      // 1337=Ganache, 56=BSC, 137=Polygon, etc.
   side           OfferSide
   asset          AssetCode
   // ... resto igual
@@ -112,7 +112,7 @@ La API tiene que saber, para cada `chainId`, la **RPC** y la **dirección del co
 
 ### 4.1 Variables de entorno
 
-Red por defecto (chainId 5777):
+Red por defecto (chainId 1337):
 
 ```env
 GANACHE_RPC_URL=http://127.0.0.1:7545
@@ -123,7 +123,7 @@ P2P_DEFAULT_CHAIN_NAME=Local   # opcional: etiqueta para GET /chains
 Redes adicionales: un único JSON `P2P_CHAINS` con todas las redes:
 
 ```env
-P2P_CHAINS='{"5777":{"rpc":"http://127.0.0.1:7545","escrow":"0x...","name":"Local"},"97":{"rpc":"https://...","escrow":"0x...","signerPk":"0x...","name":"Testnet A"}}'
+P2P_CHAINS='{"1337":{"rpc":"http://127.0.0.1:7545","escrow":"0x...","name":"Local"},"97":{"rpc":"https://...","escrow":"0x...","signerPk":"0x...","name":"Testnet A"}}'
 ```
 
 Cada entrada puede tener:
@@ -153,9 +153,9 @@ Interfaz: `SignerStrategy.getSigner(ctx)` con `ctx = { index, provider, config }
 Ejemplo de uso (agnóstico a la red):
 
 ```ts
-chain.getProvider(5777)
+chain.getProvider(1337)
 chain.getProvider(97)
-chain.getSignerByIndex(5777, 0)
+chain.getSignerByIndex(1337, 0)
 chain.getSignerByIndex(97, 0)
 ```
 
@@ -214,7 +214,7 @@ Mientras tanto, en **shared** (o en el backend) el schema de “crear oferta” 
 
 Hoy el dev-login usa **una** RPC (Ganache) y asigna `walletIndex` de esa RPC. Con varias redes tenés dos caminos:
 
-- **Solo Ganache con índices**: dejá el dev-login como está y usá “multi‑red” solo para **escrow**. Es decir: en local, todas las órdenes usan chainId 5777 y el contrato en Ganache; el “signer” sigue siendo “cuenta por índice” en esa única RPC. BSC/Polygon los usáis cuando tengáis wallets reales (MetaMask, etc.) y ahí no usás “índice” sino la dirección conectada.
+- **Solo Ganache con índices**: dejá el dev-login como está y usá “multi‑red” solo para **escrow**. Es decir: en local, todas las órdenes usan chainId 1337 y el contrato en Ganache; el “signer” sigue siendo “cuenta por índice” en esa única RPC. BSC/Polygon los usáis cuando tengáis wallets reales (MetaMask, etc.) y ahí no usás “índice” sino la dirección conectada.
 - **Varias RPC con índices**: si en algún entorno tenés varias RPC con cuentas desbloqueadas (por ejemplo una BSC testnet con cuentas inyectadas), en ese caso `getSignerByIndex(chainId, index)` ya tendría sentido y el dev-login podría guardar “por chainId” qué índice usa cada usuario en esa red (eso implica cambios en el modelo User o en una tabla user_wallets por chainId).
 
 Para no complicar el primer paso, lo más práctico es **seguir con dev-login solo en Ganache** y que “multi‑red” en la API signifique:
@@ -222,7 +222,7 @@ Para no complicar el primer paso, lo más práctico es **seguir con dev-login so
 - Configurar varias redes (RPC + contrato).
 - Que ofertas/órdenes tengan `chainId`.
 - Que lock/release usen la red de la orden.
-- Si la orden es `chainId === 5777`, usás signer por índice; si es 56/137, de momento podés devolver un error tipo “solo disponible en red local” o, más adelante, integrar firma con wallet externa.
+- Si la orden es `chainId === 1337`, usás signer por índice; si es 56/137, de momento podés devolver un error tipo “solo disponible en red local” o, más adelante, integrar firma con wallet externa.
 
 ---
 

@@ -8,6 +8,8 @@
     "dev:api": "pnpm -C apps/api dev",
     "contracts:test": "pnpm -C packages/contracts test",
     "contracts:deploy:ganache": "pnpm -C packages/contracts deploy:ganache",
+    "contracts:deploy:erc20-all:ganache": "pnpm -C packages/contracts deploy:erc20-all:ganache",
+    "contracts:fund-test-tokens:ganache": "pnpm -C packages/contracts fund-test-tokens:ganache",
     "test:flow": "pnpm -C apps/api test:flow",
     "build": "turbo build",
     "lint": "turbo lint",

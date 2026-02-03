@@ -2,6 +2,16 @@
  * Tipos y constantes para el flujo P2P
  */
 
+export type AllowanceCheck =
+  | { notApplicable: true }
+  | {
+      notApplicable?: false;
+      sufficient: boolean;
+      allowance: string;
+      amountRequired: string;
+      asset: string;
+    };
+
 export type OrderStatus =
   | "CREATED"
   | "FUNDS_LOCKED"
@@ -36,6 +46,7 @@ export interface Order {
   };
   offer?: {
     id: string;
+    makerId?: string;
     side: string;
     asset: string;
     fiat: string;
@@ -215,12 +226,34 @@ export const STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
 };
 
 /**
- * Helper para obtener el rol del usuario
+ * Rol efectivo según la oferta: SELL = maker vende (seller), BUY = maker compra (buyer).
+ * Así se muestra correctamente tanto órdenes antiguas como nuevas.
+ */
+function getEffectiveBuyerAndSellerIds(order: Order): {
+  effectiveBuyerId: string;
+  effectiveSellerId: string;
+} {
+  const offer = order.offer;
+  const makerId = offer?.makerId;
+  const side = offer?.side;
+  if (makerId && (side === "BUY" || side === "SELL")) {
+    const effectiveBuyerId =
+      side === "BUY" ? makerId : order.buyerId === makerId ? order.sellerId : order.buyerId;
+    const effectiveSellerId =
+      side === "BUY" ? (order.buyerId === makerId ? order.sellerId : order.buyerId) : makerId;
+    return { effectiveBuyerId, effectiveSellerId };
+  }
+  return { effectiveBuyerId: order.buyerId, effectiveSellerId: order.sellerId };
+}
+
+/**
+ * Helper para obtener el rol del usuario (por oferta: BUY = maker comprador, SELL = maker vendedor).
  */
 export function getUserRole(userId: string | undefined, order: Order): UserRole {
   if (!userId) return "spectator";
-  if (order.sellerId === userId) return "seller";
-  if (order.buyerId === userId) return "buyer";
+  const { effectiveBuyerId, effectiveSellerId } = getEffectiveBuyerAndSellerIds(order);
+  if (effectiveSellerId === userId) return "seller";
+  if (effectiveBuyerId === userId) return "buyer";
   return "spectator";
 }
 

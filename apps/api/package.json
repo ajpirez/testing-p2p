@@ -17,6 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
     "test:flow": "tsx scripts/test-flow.ts",
     "test": "jest",
     "test:watch": "jest --watch",

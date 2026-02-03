@@ -21,6 +21,7 @@ enum AssetCode {
 enum FiatCode {
   EUR
   USD
+  CUP
 }
 
 enum PaymentMethodType {
@@ -57,7 +58,7 @@ model Offer {
   id             String              @id @default(uuid())
   makerId        String
   maker          User                @relation("UserOffers", fields: [makerId], references: [id])
-  chainId        Int                 @default(5777)
+  chainId        Int                 @default(1337)
   side           OfferSide
   asset          AssetCode
   fiat           FiatCode
@@ -76,7 +77,7 @@ model Order {
   id        String      @id @default(uuid())
   offerId   String
   offer     Offer       @relation(fields: [offerId], references: [id])
-  chainId   Int         @default(5777)
+  chainId   Int         @default(1337)
   buyerId   String
   buyer     User        @relation("BuyerOrders", fields: [buyerId], references: [id])
   sellerId  String
