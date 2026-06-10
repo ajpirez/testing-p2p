@@ -4,9 +4,8 @@ export const OfferSideSchema = z.enum(["BUY", "SELL"]);
 export const CurrencyCodeSchema = z.enum(["USDT", "USDC"]);
 export const FiatCodeSchema = z.enum(["EUR", "USD", "CUP"]);
 export const PaymentMethodTypeSchema = z.enum([
-  "BANK_TRANSFER",
-  "BIZUM",
-  "PAYPAL",
+  "TRANSFERMOVIL",
+  "ENZONA",
   "CASH",
 ]);
 

@@ -54,11 +54,11 @@ export default function Home() {
     price: 1.0,
     minAmount: 0.01,
     maxAmount: 1,
-    paymentMethods: ["BANK_TRANSFER"],
+    paymentMethods: ["TRANSFERMOVIL"],
   });
 
   const paymentOptions: PaymentMethodType[] = useMemo(
-    () => ["BANK_TRANSFER", "BIZUM", "PAYPAL", "CASH"],
+    () => ["TRANSFERMOVIL", "ENZONA", "CASH"],
     []
   );
 
